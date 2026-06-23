@@ -25,7 +25,14 @@
       </div>
       <button class="primary wide" data-go="add">+ Tambah Resep</button>
       <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
-      <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Apa Hari Ini?</button></div><div id="randomResult"></div><h2>Dashboard</h2><div class="stats"><div class="card"><b id="dash5star">0</b><span>Rating 5⭐</span></div><div class="card"><b id="dashLatest">0</b><span>Resep Baru</span></div></div><h2>Resep Terbaru</h2>
+      <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Apa Hari Ini?</button></div>
+      <div id="randomResult"></div>
+      <h2>Dashboard</h2>
+      <div class="stats">
+        <div class="card"><b id="dash5star">0</b><span>Rating 5⭐</span></div>
+        <div class="card"><b id="dashLatest">0</b><span>Resep Baru</span></div>
+      </div>
+      <h2>Resep Terbaru</h2>
       <div id="latestList" class="list"></div>
     </section>
 
@@ -37,7 +44,10 @@
         <button class="chip" data-filter="Ayam">Ayam</button>
         <button class="chip" data-filter="Sapi">Sapi</button>
         <button class="chip" data-filter="Seafood">Seafood</button>
-        <button class="chip" data-filter="Sayur">Sayur</button><button class="chip" data-filter="Manual">✍️ Manual</button><button class="chip" data-filter="YouTube">📺 YouTube</button><button class="chip" data-filter="AI">🤖 AI</button>
+        <button class="chip" data-filter="Sayur">Sayur</button>
+        <button class="chip" data-filter="Manual">✍️ Manual</button>
+        <button class="chip" data-filter="YouTube">📺 YouTube</button>
+        <button class="chip" data-filter="AI">🤖 AI</button>
       </div>
       <div id="recipeList" class="list"></div>
     </section>
@@ -82,7 +92,14 @@
         </label>
         <label>Durasi Menit<input id="durasi_menit" type="number" placeholder="45" /></label>
         <label>Porsi<input id="porsi" type="number" placeholder="4" /></label>
-        <label>Status<select id="status"><option>Belum Dicoba</option><option>Sudah Dicoba</option><option>Favorit Keluarga</option><option>Resep Andalan</option></select></label>
+        <label>Status
+          <select id="status">
+            <option>Belum Dicoba</option>
+            <option>Sudah Dicoba</option>
+            <option>Favorit Keluarga</option>
+            <option>Resep Andalan</option>
+          </select>
+        </label>
         <label>Rating Keluarga <small class="hint">maksimal 5 bintang</small>
           <select id="rating_keluarga">
             <option value="0">Belum diberi rating</option>
@@ -103,7 +120,6 @@
           <div id="ingredientGroups"></div>
         </div>
         <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris"></textarea></label>
-        
         <label>Sumber Resep
           <select id="sumber_resep">
             <option>Manual</option>
@@ -111,7 +127,6 @@
             <option>AI</option>
           </select>
         </label>
-
         <label>Tag<input id="tag" placeholder="air fryer, cepat, hemat" /></label>
         <label>Catatan Yonarta<textarea id="catatan_yonarta"></textarea></label>
         <label>Link Sumber<input id="link_sumber" placeholder="YouTube / website" /></label>
@@ -120,25 +135,36 @@
       </form>
     </section>
 
-
-
     <section id="detail" class="page">
       <button class="ghost" type="button" id="backToRecipes">← Kembali ke Resep</button>
       <div id="recipeDetail" class="detail-box"></div>
     </section>
 
     <section id="plan" class="page">
-      <h2>Jadwal Menu</h2>
-      <label>Jumlah Hari<input id="jumlahHari" type="number" value="7" min="1" /></label>
-      <label>Menu per Hari<input id="menuPerHari" type="number" value="2" min="1" max="3" /></label>
-      <label>Mode Random<select id="modeRandom"><option>Random Semua</option><option>Favorit Keluarga</option><option>Menu Cepat</option><option>Menu Hemat</option></select></label>
+      <h2>📅 Jadwal Menu</h2>
+      <div class="plan-controls">
+        <label>Jumlah Hari<input id="jumlahHari" type="number" value="7" min="1" max="14" /></label>
+        <label>Menu per Hari<input id="menuPerHari" type="number" value="2" min="1" max="3" /></label>
+        <label>Mode
+          <select id="modeRandom">
+            <option value="all">🎲 Random Semua</option>
+            <option value="fav">❤️ Favorit Keluarga</option>
+            <option value="fast">⚡ Menu Cepat (≤30 menit)</option>
+            <option value="hemat">💰 Menu Hemat</option>
+          </select>
+        </label>
+      </div>
       <button id="generatePlan" class="primary wide">🎲 Buat Jadwal</button>
-      <div id="planResult" class="list"></div>
+      <div id="planResult"></div>
+      <div id="planActions" style="display:none">
+        <button id="generateShoppingList" class="primary wide">🛒 Buat Daftar Belanja</button>
+      </div>
+      <div id="shoppingListResult"></div>
     </section>
 
     <section id="master" class="page">
       <h2>Master Bahan</h2>
-      <p class="muted">Daftar nama bahan standar agar tidak terjadi duplikasi seperti “bawang putih”, “Bawang Putih”, dan “bawang putih lokal”.</p>
+      <p class="muted">Daftar nama bahan standar agar tidak terjadi duplikasi.</p>
       <form id="masterIngredientForm" class="inline-form">
         <input id="masterIngredientName" placeholder="Nama bahan, contoh: Bawang Putih" required />
         <select id="masterIngredientCategory">
@@ -152,7 +178,6 @@
         <button class="primary" type="submit">Tambah</button>
       </form>
       <div id="masterIngredientList" class="list compact-list"></div>
-
       <h2>Master Satuan</h2>
       <p class="muted">Dipakai sebagai pilihan satuan pada bahan resep.</p>
       <form id="masterUnitForm" class="inline-form">
@@ -162,16 +187,25 @@
       <div id="masterUnitList" class="tags"></div>
     </section>
 
-    
-  <section id="gallery" class="page"><h2>Galeri Foto Resep</h2><div id="galleryGrid" class="list"></div></section><section id="history" class="page"><h2>Riwayat Resep</h2><div id="historyList" class="list"></div></section></main>
+    <section id="gallery" class="page">
+      <h2>Galeri Foto Resep</h2>
+      <div id="galleryGrid" class="list"></div>
+    </section>
+
+    <section id="history" class="page">
+      <h2>Riwayat Resep</h2>
+      <div id="historyList" class="list"></div>
+    </section>
+  </main>
 
   <nav class="bottomnav">
     <button class="active" data-go="home">🏠<span>Beranda</span></button>
     <button data-go="recipes">📖<span>Resep</span></button>
     <button data-go="add">➕<span>Tambah</span></button>
     <button data-go="plan">📅<span>Jadwal</span></button>
-    <button data-go="master">📚<span>Bahan</span></button><button data-go="gallery">🖼️<span>Galeri</span></button><button data-go="history">🕒<span>Riwayat</span></button>
-    
+    <button data-go="master">📚<span>Bahan</span></button>
+    <button data-go="gallery">🖼️<span>Galeri</span></button>
+    <button data-go="history">🕒<span>Riwayat</span></button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

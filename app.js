@@ -4,14 +4,15 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PHOTO_BUCKET = 'recipe-photos';
 
 let recipes = [];
-let pantry = [];
 let masterIngredients = [];
 let masterUnits = [];
 let activeFilter = '';
 let ingredientGroupsState = [];
+let mealPlan = []; // [{day:1, meals:[{recipeId, locked},...]}]
 
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
+const MEAL_LABELS = ['Pagi','Siang','Malam'];
 
 const $ = (id) => document.getElementById(id);
 const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean);
@@ -90,7 +91,6 @@ async function loadAll(){
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
   if(er) return alert('Gagal ambil resep: ' + er.message);
   recipes = r || [];
-  
 
   const mi = await db.from('master_ingredients').select('*').order('nama_bahan',{ascending:true});
   if(!mi.error) masterIngredients = mi.data || [];
@@ -104,6 +104,7 @@ function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
   renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
+  renderDashboard(); renderGallery(); renderHistory();
 }
 
 function recipeCard(r){
@@ -116,7 +117,10 @@ function recipeCard(r){
 window.viewRecipe = (id) => {
   const r = recipes.find(x=>x.id===id);
   if(!r) return alert('Resep tidak ditemukan.');
-  const sourceBadge = r.sumber_resep ? `<span class="tag-pill source-badge">${r.sumber_resep==='YouTube'?'📺':r.sumber_resep==='AI'?'🤖':'✍️'} ${r.sumber_resep}</span>`:'';
+  // track history
+  recipeHistory = [id, ...recipeHistory.filter(x=>x!==id)].slice(0,10);
+  localStorage.setItem('recipeHistory', JSON.stringify(recipeHistory));
+
   const photo = r.foto_url ? `<img class="detail-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" />` : '';
   const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada tag</span>';
   $('recipeDetail').innerHTML = `
@@ -129,8 +133,9 @@ window.viewRecipe = (id) => {
         <div><b>Jenis Hidangan</b><span>${escapeHtml(r.jenis_hidangan || '-')}</span></div>
         <div><b>Durasi</b><span>${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : '-'}</span></div>
         <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
-        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div><div><b>Sumber Resep</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
-        <div><b>Sumber</b><span>${r.link_sumber ? `<a href="${escapeHtml(r.link_sumber)}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
+        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div>
+        <div><b>Sumber</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
+        <div><b>Link</b><span>${r.link_sumber ? `<a href="${escapeHtml(r.link_sumber)}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
       </div>
       <h3>🧂 Bahan</h3>
       <div class="recipe-content grouped-ingredients">${ingredientsDetailHtml(r.bahan)}</div>
@@ -147,6 +152,7 @@ window.viewRecipe = (id) => {
     </div>`;
   go('detail');
   window.scrollTo({top:0, behavior:'smooth'});
+  renderHistory();
 };
 
 function renderLatest(){ $('latestList').innerHTML = recipes.slice(0,5).map(recipeCard).join('') || '<p class="muted">Belum ada resep.</p>'; }
@@ -256,18 +262,210 @@ window.editRecipe = (id)=>{
 window.deleteRecipe = async (id)=>{ if(!confirm('Hapus resep ini?')) return; const {error}=await db.from('recipes').delete().eq('id',id); if(error) alert(error.message); await loadAll(); go('recipes'); };
 function resetForm(){ $('recipeForm').reset(); $('recipeId').value=''; $('formTitle').textContent='Tambah Resep'; $('rating_keluarga').value=0; setPhotoPreview(null); ingredientGroupsState = [{ nama_grup:'Bahan Utama', items:[{nama_bahan:'', jumlah:'', satuan:''}] }]; renderIngredientGroups(); }
 
-$('generatePlan').onclick = ()=>{
-  const days = Number($('jumlahHari').value || 7), meals = Number($('menuPerHari').value || 1), mode = $('modeRandom').value;
+// ========== MEAL PLANNER ==========
+
+function getFilteredPool(){
+  const mode = $('modeRandom').value;
   let pool = [...recipes];
-  if(mode==='Favorit Keluarga') pool = pool.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status));
-  if(mode==='Menu Cepat') pool = pool.filter(r=>(r.durasi_menit||999)<=30);
-  if(mode==='Menu Hemat') pool = pool.filter(r=>(r.tag||[]).includes('hemat'));
-  if(pool.length===0) return alert('Belum ada resep yang cocok.');
-  const times=['Pagi','Siang','Malam']; let html='';
-  for(let d=1; d<=days; d++){ html += `<div class="item"><h3>Hari ${d}</h3>`; for(let m=0;m<meals;m++){ const pick=pool[Math.floor(Math.random()*pool.length)]; html += `<p>${times[m]||'Menu'}: <b>${pick.nama_resep}</b></p>`;} html+='</div>'; }
-  $('planResult').innerHTML=html;
+  if(mode==='fav') pool = pool.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status));
+  if(mode==='fast') pool = pool.filter(r=>(r.durasi_menit||999)<=30);
+  if(mode==='hemat') pool = pool.filter(r=>(r.tag||[]).includes('hemat'));
+  return pool;
+}
+
+function pickRandom(pool, exclude=[]){
+  const available = pool.filter(r=>!exclude.includes(r.id));
+  const src = available.length ? available : pool;
+  return src[Math.floor(Math.random()*src.length)];
+}
+
+$('generatePlan').onclick = ()=>{
+  const days = Math.min(Number($('jumlahHari').value || 7), 14);
+  const meals = Math.min(Number($('menuPerHari').value || 2), 3);
+  const pool = getFilteredPool();
+  if(!pool.length) return alert('Belum ada resep yang cocok dengan mode ini.');
+
+  const newPlan = [];
+  const usedIds = [];
+  for(let d=1; d<=days; d++){
+    // preserve locked meals from existing plan
+    const existingDay = mealPlan.find(x=>x.day===d);
+    const dayMeals = [];
+    for(let m=0; m<meals; m++){
+      const existingMeal = existingDay?.meals?.[m];
+      if(existingMeal?.locked){
+        dayMeals.push({...existingMeal});
+        usedIds.push(existingMeal.recipeId);
+      } else {
+        const pick = pickRandom(pool, usedIds);
+        dayMeals.push({ recipeId: pick.id, locked: false });
+        usedIds.push(pick.id);
+      }
+    }
+    newPlan.push({ day: d, meals: dayMeals });
+  }
+  mealPlan = newPlan;
+  renderMealPlan();
 };
 
+window.toggleLockMeal = (day, mealIdx) => {
+  const d = mealPlan.find(x=>x.day===day);
+  if(!d || !d.meals[mealIdx]) return;
+  d.meals[mealIdx].locked = !d.meals[mealIdx].locked;
+  renderMealPlan();
+};
+
+window.randomizeDayMeal = (day, mealIdx) => {
+  const d = mealPlan.find(x=>x.day===day);
+  if(!d || !d.meals[mealIdx]) return;
+  if(d.meals[mealIdx].locked) return;
+  const pool = getFilteredPool();
+  if(!pool.length) return;
+  const usedInDay = d.meals.filter((_,i)=>i!==mealIdx).map(m=>m.recipeId);
+  const pick = pickRandom(pool, usedInDay);
+  d.meals[mealIdx].recipeId = pick.id;
+  renderMealPlan();
+};
+
+window.randomizeDay = (day) => {
+  const d = mealPlan.find(x=>x.day===day);
+  if(!d) return;
+  const pool = getFilteredPool();
+  if(!pool.length) return;
+  const usedIds = [];
+  d.meals.forEach((meal, i) => {
+    if(!meal.locked){
+      const pick = pickRandom(pool, usedIds);
+      meal.recipeId = pick.id;
+    }
+    usedIds.push(meal.recipeId);
+  });
+  renderMealPlan();
+};
+
+function renderMealPlan(){
+  if(!mealPlan.length){
+    $('planResult').innerHTML = '';
+    $('planActions').style.display = 'none';
+    $('shoppingListResult').innerHTML = '';
+    return;
+  }
+
+  let html = '<div class="plan-grid">';
+  mealPlan.forEach(d => {
+    html += `<div class="plan-day">
+      <div class="plan-day-header">
+        <h3>Hari ${d.day}</h3>
+        <button class="ghost small" onclick="randomizeDay(${d.day})" title="Acak semua menu hari ini">🔄</button>
+      </div>`;
+    d.meals.forEach((meal, mi) => {
+      const r = recipes.find(x=>x.id===meal.recipeId);
+      const name = r ? r.nama_resep : '(resep dihapus)';
+      const label = MEAL_LABELS[mi] || 'Menu';
+      const lockIcon = meal.locked ? '🔒' : '🔓';
+      const lockClass = meal.locked ? 'locked' : '';
+      html += `<div class="plan-meal ${lockClass}">
+        <div class="plan-meal-label">${label}</div>
+        <div class="plan-meal-name" onclick="if(${!!r})viewRecipe('${meal.recipeId}')">${escapeHtml(name)}</div>
+        <div class="plan-meal-actions">
+          <button class="plan-btn" onclick="toggleLockMeal(${d.day},${mi})" title="${meal.locked?'Unlock':'Lock'}">${lockIcon}</button>
+          <button class="plan-btn" onclick="randomizeDayMeal(${d.day},${mi})" title="Ganti menu ini" ${meal.locked?'disabled':''}>🔄</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  $('planResult').innerHTML = html;
+  $('planActions').style.display = 'block';
+  $('shoppingListResult').innerHTML = '';
+}
+
+// ========== SHOPPING LIST ==========
+
+$('generateShoppingList').onclick = () => {
+  if(!mealPlan.length) return;
+
+  // collect all recipe IDs from the plan
+  const recipeIds = [...new Set(mealPlan.flatMap(d => d.meals.map(m => m.recipeId)))];
+  // count how many times each recipe appears
+  const recipeCounts = {};
+  mealPlan.forEach(d => d.meals.forEach(m => {
+    recipeCounts[m.recipeId] = (recipeCounts[m.recipeId] || 0) + 1;
+  }));
+
+  // aggregate ingredients
+  const ingredientMap = {}; // key: "nama_bahan|satuan" => {nama_bahan, jumlah, satuan, kategori}
+  recipeIds.forEach(id => {
+    const r = recipes.find(x => x.id === id);
+    if (!r || !r.bahan) return;
+    const groups = normalizeIngredientGroups(r.bahan);
+    const multiplier = recipeCounts[id] || 1;
+    groups.forEach(g => {
+      (g.items || []).forEach(item => {
+        if (!item.nama_bahan) return;
+        const key = (item.nama_bahan + '|' + (item.satuan || '')).toLowerCase();
+        if (!ingredientMap[key]) {
+          // find category from master
+          const master = masterIngredients.find(mi => mi.nama_bahan.toLowerCase() === item.nama_bahan.toLowerCase());
+          ingredientMap[key] = {
+            nama_bahan: item.nama_bahan,
+            jumlah: 0,
+            satuan: item.satuan || '',
+            kategori: master?.kategori_bahan || 'Lainnya'
+          };
+        }
+        if (item.jumlah) {
+          ingredientMap[key].jumlah += Number(item.jumlah) * multiplier;
+        }
+      });
+    });
+  });
+
+  const items = Object.values(ingredientMap).sort((a,b) => a.kategori.localeCompare(b.kategori) || a.nama_bahan.localeCompare(b.nama_bahan));
+
+  if (!items.length) {
+    $('shoppingListResult').innerHTML = '<p class="muted">Resep dalam jadwal belum memiliki bahan terstruktur.</p>';
+    return;
+  }
+
+  // group by category
+  const byCategory = {};
+  items.forEach(it => {
+    if (!byCategory[it.kategori]) byCategory[it.kategori] = [];
+    byCategory[it.kategori].push(it);
+  });
+
+  const categoryIcons = { 'Bumbu':'🧂', 'Daging':'🥩', 'Sayur':'🥬', 'Karbohidrat':'🍚', 'Buah':'🍎', 'Lainnya':'📦' };
+
+  let html = '<div class="shopping-list">';
+  html += '<h3>🛒 Daftar Belanja</h3>';
+  html += `<p class="muted">${mealPlan.length} hari · ${mealPlan.reduce((s,d)=>s+d.meals.length,0)} menu · ${items.length} bahan</p>`;
+
+  Object.entries(byCategory).forEach(([cat, catItems]) => {
+    const icon = categoryIcons[cat] || '📦';
+    html += `<div class="shop-category">
+      <h4>${icon} ${escapeHtml(cat)}</h4>
+      <ul class="shop-items">`;
+    catItems.forEach((it, idx) => {
+      const qtyStr = it.jumlah ? `${Number.isInteger(it.jumlah) ? it.jumlah : it.jumlah.toFixed(1)} ${it.satuan}` : (it.satuan || 'secukupnya');
+      const checkId = `shop-${cat}-${idx}`;
+      html += `<li>
+        <label class="shop-item">
+          <input type="checkbox" id="${checkId}" onchange="this.closest('li').classList.toggle('checked')">
+          <span class="shop-name">${escapeHtml(it.nama_bahan)}</span>
+          <span class="shop-qty">${escapeHtml(qtyStr)}</span>
+        </label>
+      </li>`;
+    });
+    html += '</ul></div>';
+  });
+  html += '</div>';
+  $('shoppingListResult').innerHTML = html;
+  $('shoppingListResult').scrollIntoView({ behavior: 'smooth' });
+};
+
+// ========== MASTER BAHAN/SATUAN ==========
 
 $('masterIngredientForm').onsubmit = async (e)=>{
   e.preventDefault();
@@ -291,46 +489,35 @@ function renderMasterUnits(){
   $('masterUnitList').innerHTML = masterUnits.map(u=> u.id ? `<span class="tag-pill">${escapeHtml(u.nama_satuan)} <button class="mini-x" onclick='deleteMasterUnit("${u.id}")'>×</button></span>` : `<span class="tag-pill">${escapeHtml(u.nama_satuan)}</span>`).join('');
 }
 
-resetForm();
-loadAll();
-
-
-let recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]');
-
-const oldViewRecipe = window.viewRecipe;
-window.viewRecipe = (id)=>{
-  recipeHistory = [id, ...recipeHistory.filter(x=>x!==id)].slice(0,10);
-  localStorage.setItem('recipeHistory', JSON.stringify(recipeHistory));
-  oldViewRecipe(id);
-  renderHistory();
-};
+// ========== DASHBOARD / GALLERY / HISTORY ==========
 
 function renderDashboard(){
- if(document.getElementById('dash5star'))
-  document.getElementById('dash5star').textContent = recipes.filter(r=>Number(r.rating_keluarga)===5).length;
- if(document.getElementById('dashLatest'))
-  document.getElementById('dashLatest').textContent = Math.min(recipes.length,5);
+  if($('dash5star')) $('dash5star').textContent = recipes.filter(r=>Number(r.rating_keluarga)===5).length;
+  if($('dashLatest')) $('dashLatest').textContent = Math.min(recipes.length,5);
 }
 
 function renderGallery(){
- const el=document.getElementById('galleryGrid'); if(!el) return;
- el.innerHTML=recipes.filter(r=>r.foto_url).map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><img class="recipe-photo" src="${r.foto_url}"><h3>${r.nama_resep}</h3></div>`).join('');
+  const el=$('galleryGrid'); if(!el) return;
+  el.innerHTML=recipes.filter(r=>r.foto_url).map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><img class="recipe-photo" src="${r.foto_url}"><h3>${r.nama_resep}</h3></div>`).join('') || '<p class="muted">Belum ada foto resep.</p>';
 }
+
+let recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]');
 
 function renderHistory(){
- const el=document.getElementById('historyList'); if(!el) return;
- const data=recipeHistory.map(id=>recipes.find(r=>r.id===id)).filter(Boolean);
- el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${r.nama_resep}</h3></div>`).join('')||'<p class="muted">Belum ada riwayat.</p>';
+  const el=$('historyList'); if(!el) return;
+  const data=recipeHistory.map(id=>recipes.find(r=>r.id===id)).filter(Boolean);
+  el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${r.nama_resep}</h3><p>${escapeHtml(r.bahan_utama||'')} · ${escapeHtml(r.jenis_hidangan||'')}</p></div>`).join('')||'<p class="muted">Belum ada riwayat.</p>';
 }
 
-setTimeout(()=>{
- const btn=document.getElementById('randomRecipeBtn');
- if(btn) btn.onclick=()=>{
-   if(!recipes.length) return;
-   const r=recipes[Math.floor(Math.random()*recipes.length)];
-   document.getElementById('randomResult').innerHTML=`<div class="item"><h3>${r.nama_resep}</h3><p>${r.jenis_hidangan||''}</p><button class="primary" onclick='viewRecipe("${r.id}")'>Lihat Resep</button></div>`;
- };
-},500);
+// ========== RANDOM RECIPE ==========
 
-const oldRender = render;
-render = function(){ oldRender(); renderDashboard(); renderGallery(); renderHistory(); }
+$('randomRecipeBtn').onclick = ()=>{
+  if(!recipes.length) return;
+  const r=recipes[Math.floor(Math.random()*recipes.length)];
+  $('randomResult').innerHTML=`<div class="item"><h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.jenis_hidangan||'')} · ${escapeHtml(r.bahan_utama||'')}</p><button class="primary" onclick='viewRecipe("${r.id}")'>Lihat Resep</button></div>`;
+};
+
+// ========== INIT ==========
+
+resetForm();
+loadAll();
