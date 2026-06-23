@@ -4,3 +4,8 @@
 
 
 .detail-box{margin:12px 0 24px}.detail-photo{width:100%;max-height:360px;object-fit:cover;border-radius:20px;border:1px solid var(--border);background:#fff;margin:12px 0}.detail-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px;box-shadow:0 8px 24px #0000000d}.rating-line{font-size:20px;margin:4px 0 14px!important;color:var(--brand)!important}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.meta-grid div{background:#fff7ed;border:1px solid var(--border);border-radius:14px;padding:10px}.meta-grid b{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.meta-grid span{font-weight:700}.recipe-content ul,.recipe-content ol{padding-left:22px;line-height:1.7}.checklist li{list-style:'☐  ';padding-left:4px}.steps li{margin-bottom:8px}.tags{display:flex;gap:8px;flex-wrap:wrap}.tag-pill{background:#fff7ed;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-weight:700;color:var(--text)}.note-box{white-space:pre-wrap;background:#fff7ed;border:1px solid var(--border);border-radius:14px;padding:12px;color:var(--text)!important}.detail-actions{display:grid;grid-template-columns:1fr 1fr}.item .primary{background:var(--brand);color:#fff}
+
+.clickable-card{cursor:pointer;transition:transform .12s ease, box-shadow .12s ease}
+.clickable-card:active{transform:scale(.99)}
+.clickable-card:hover{box-shadow:0 12px 28px #00000014}
+.recipe-photo{pointer-events:none}
