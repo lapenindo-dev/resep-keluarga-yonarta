@@ -11,6 +11,13 @@ const $ = (id) => document.getElementById(id);
 const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean);
 const csvArray = (v) => (v || '').split(',').map(x => x.trim()).filter(Boolean);
 const stars = (n) => n > 0 ? '⭐'.repeat(Math.min(Number(n)||0, 5)) : 'Belum ada rating';
+const escapeHtml = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
+const listHtml = (arr, type='ul') => {
+  const a = Array.isArray(arr) ? arr : [];
+  if(!a.length) return '<p class="muted">Belum diisi.</p>';
+  const items = a.map(x => `<li>${escapeHtml(x)}</li>`).join('');
+  return `<${type}>${items}</${type}>`;
+};
 
 async function uploadRecipePhoto(file){
   if(!file) return null;
@@ -37,6 +44,7 @@ function go(page){
 
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 $('refreshBtn').onclick = loadAll;
+$('backToRecipes').onclick = () => go('recipes');
 $('cancelEdit').onclick = () => { resetForm(); go('home'); window.scrollTo({top:0, behavior:'smooth'}); };
 $('foto_file').addEventListener('change', () => {
   const f = $('foto_file').files?.[0];
@@ -61,9 +69,45 @@ function render(){
 
 function recipeCard(r){
   const bahan = Array.isArray(r.bahan) ? r.bahan.slice(0,3).join(', ') : '';
-  const photo = r.foto_url ? `<img class="recipe-photo" src="${r.foto_url}" alt="Foto ${r.nama_resep}" loading="lazy" />` : '';
-  return `<div class="item">${photo}<h3>${r.nama_resep}</h3><p>${r.bahan_utama || '-'} · ${r.jenis_hidangan || '-'} · ${r.status || '-'}</p><p>${stars(r.rating_keluarga)}</p><p>${bahan}</p><div class="actions"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
+  const photo = r.foto_url ? `<img class="recipe-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" loading="lazy" />` : '';
+  return `<div class="item">${photo}<h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')} · ${escapeHtml(r.status || '-')}</p><p>${stars(r.rating_keluarga)}</p><p>${escapeHtml(bahan)}</p><div class="actions"><button class="primary" onclick='viewRecipe("${r.id}")'>Detail</button><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
 }
+
+window.viewRecipe = (id) => {
+  const r = recipes.find(x=>x.id===id);
+  if(!r) return alert('Resep tidak ditemukan.');
+  const photo = r.foto_url ? `<img class="detail-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" />` : '';
+  const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada tag</span>';
+  $('recipeDetail').innerHTML = `
+    ${photo}
+    <div class="detail-card">
+      <h2>${escapeHtml(r.nama_resep)}</h2>
+      <p class="rating-line">${stars(r.rating_keluarga)}</p>
+      <div class="meta-grid">
+        <div><b>Bahan Utama</b><span>${escapeHtml(r.bahan_utama || '-')}</span></div>
+        <div><b>Jenis Hidangan</b><span>${escapeHtml(r.jenis_hidangan || '-')}</span></div>
+        <div><b>Durasi</b><span>${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : '-'}</span></div>
+        <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
+        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div>
+        <div><b>Sumber</b><span>${r.link_sumber ? `<a href="${escapeHtml(r.link_sumber)}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
+      </div>
+      <h3>🧂 Bahan</h3>
+      <div class="recipe-content checklist">${listHtml(r.bahan, 'ul')}</div>
+      <h3>👨‍🍳 Cara Memasak</h3>
+      <div class="recipe-content steps">${listHtml(r.cara_memasak, 'ol')}</div>
+      <h3>🏷 Tag</h3>
+      <div class="tags">${tags}</div>
+      <h3>📝 Catatan Yonarta</h3>
+      <p class="note-box">${escapeHtml(r.catatan_yonarta || 'Belum ada catatan.')}</p>
+      <div class="actions detail-actions">
+        <button class="secondary" onclick='editRecipe("${r.id}")'>Edit Resep</button>
+        <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus Resep</button>
+      </div>
+    </div>
+  `;
+  go('detail');
+  window.scrollTo({top:0, behavior:'smooth'});
+};
 
 function renderLatest(){ $('latestList').innerHTML = recipes.slice(0,5).map(recipeCard).join('') || '<p class="muted">Belum ada resep.</p>'; }
 function renderRecipes(){
