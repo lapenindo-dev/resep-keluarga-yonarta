@@ -309,3 +309,21 @@ function renderMasterUnits(){
 
 resetForm();
 loadAll();
+
+let recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]');
+function renderHistory(){
+ const el=document.getElementById('historyList'); if(!el) return;
+ el.innerHTML=recipeHistory.map(id=>{const r=recipes.find(x=>x.id===id); return r?`<div class="item" onclick='viewRecipe("${r.id}")'><h3>${r.nama_resep}</h3></div>`:''}).join('')||'<p class="muted">Belum ada.</p>';
+}
+document.getElementById('randomRecipeBtn')?.addEventListener('click',()=>{
+ if(!recipes.length) return;
+ const r=recipes[Math.floor(Math.random()*recipes.length)];
+ document.getElementById('randomResult').innerHTML=`<div class="item"><h3>${r.nama_resep}</h3><p>${r.durasi_menit||'-'} menit</p></div>`;
+});
+const _oldView=window.viewRecipe;
+window.viewRecipe=(id)=>{
+ recipeHistory=[id,...recipeHistory.filter(x=>x!==id)].slice(0,10);
+ localStorage.setItem('recipeHistory',JSON.stringify(recipeHistory));
+ _oldView(id); renderHistory();
+}
+setTimeout(renderHistory,500);
