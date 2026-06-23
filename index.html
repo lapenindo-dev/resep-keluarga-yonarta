@@ -47,12 +47,48 @@
       <form id="recipeForm">
         <input type="hidden" id="recipeId" />
         <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Samcan Crispy" /></label>
-        <label>Bahan Utama<input id="bahan_utama" placeholder="Babi / Ayam / Sapi" /></label>
-        <label>Jenis Hidangan<input id="jenis_hidangan" placeholder="Panggang / Sup / Mie" /></label>
+        <label>Bahan Utama
+          <select id="bahan_utama">
+            <option value="">Pilih bahan utama</option>
+            <option>Babi</option>
+            <option>Ayam</option>
+            <option>Sapi</option>
+            <option>Seafood</option>
+            <option>Sayur</option>
+            <option>Telur</option>
+            <option>Tahu dan Tempe</option>
+            <option>Lainnya</option>
+          </select>
+        </label>
+        <label>Jenis Hidangan
+          <select id="jenis_hidangan">
+            <option value="">Pilih jenis hidangan</option>
+            <option>Nasi</option>
+            <option>Mie</option>
+            <option>Sup dan Kuah</option>
+            <option>Goreng</option>
+            <option>Panggang</option>
+            <option>Tumis</option>
+            <option>Cemilan</option>
+            <option>Dessert</option>
+            <option>Saus dan Bumbu</option>
+            <option>Minuman</option>
+            <option>Lainnya</option>
+          </select>
+        </label>
         <label>Durasi Menit<input id="durasi_menit" type="number" placeholder="45" /></label>
         <label>Porsi<input id="porsi" type="number" placeholder="4" /></label>
         <label>Status<select id="status"><option>Belum Dicoba</option><option>Sudah Dicoba</option><option>Favorit Keluarga</option><option>Resep Andalan</option></select></label>
-        <label>Rating Keluarga<input id="rating_keluarga" type="number" min="0" max="5" value="0" /></label>
+        <label>Rating Keluarga <small class="hint">maksimal 5 bintang</small>
+          <select id="rating_keluarga">
+            <option value="0">Belum diberi rating</option>
+            <option value="1">⭐ 1 / 5</option>
+            <option value="2">⭐⭐ 2 / 5</option>
+            <option value="3">⭐⭐⭐ 3 / 5</option>
+            <option value="4">⭐⭐⭐⭐ 4 / 5</option>
+            <option value="5">⭐⭐⭐⭐⭐ 5 / 5</option>
+          </select>
+        </label>
         <label>Bahan<textarea id="bahan" placeholder="Tulis 1 bahan per baris"></textarea></label>
         <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris"></textarea></label>
         <label>Tag<input id="tag" placeholder="air fryer, cepat, hemat" /></label>

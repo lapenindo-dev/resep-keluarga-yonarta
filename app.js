@@ -9,6 +9,7 @@ let activeFilter = '';
 const $ = (id) => document.getElementById(id);
 const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean);
 const csvArray = (v) => (v || '').split(',').map(x => x.trim()).filter(Boolean);
+const stars = (n) => n > 0 ? '⭐'.repeat(Math.min(Number(n)||0, 5)) : 'Belum ada rating';
 
 function go(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -18,7 +19,7 @@ function go(page){
 
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 $('refreshBtn').onclick = loadAll;
-$('cancelEdit').onclick = () => { resetForm(); go('recipes'); window.scrollTo({top:0, behavior:'smooth'}); };
+$('cancelEdit').onclick = () => { resetForm(); go('home'); window.scrollTo({top:0, behavior:'smooth'}); };
 
 async function loadAll(){
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
@@ -37,7 +38,7 @@ function render(){
 
 function recipeCard(r){
   const bahan = Array.isArray(r.bahan) ? r.bahan.slice(0,3).join(', ') : '';
-  return `<div class="item"><h3>${r.nama_resep}</h3><p>${r.bahan_utama || '-'} · ${r.jenis_hidangan || '-'} · ${r.status || '-'}</p><p>${bahan}</p><div class="actions"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
+  return `<div class="item"><h3>${r.nama_resep}</h3><p>${r.bahan_utama || '-'} · ${r.jenis_hidangan || '-'} · ${r.status || '-'}</p><p>${stars(r.rating_keluarga)}</p><p>${bahan}</p><div class="actions"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
 }
 
 function renderLatest(){ $('latestList').innerHTML = recipes.slice(0,5).map(recipeCard).join('') || '<p class="muted">Belum ada resep.</p>'; }
@@ -65,7 +66,7 @@ $('recipeForm').onsubmit = async (e)=>{
     durasi_menit: $('durasi_menit').value ? Number($('durasi_menit').value) : null,
     porsi: $('porsi').value ? Number($('porsi').value) : null,
     status: $('status').value,
-    rating_keluarga: Number($('rating_keluarga').value || 0),
+    rating_keluarga: Math.min(Number($('rating_keluarga').value || 0), 5),
     bahan: lineArray($('bahan').value),
     cara_memasak: lineArray($('cara_memasak').value),
     tag: csvArray($('tag').value),
