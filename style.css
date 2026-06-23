@@ -13,6 +13,7 @@ main{padding:0 16px}
 .card span,.muted{color:var(--muted)}
 button,input,textarea,select{font:inherit}
 button{border:0;border-radius:14px;padding:12px 14px;font-weight:700}
+button:disabled{opacity:.5;cursor:not-allowed}
 .primary{background:var(--brand);color:#fff}
 .secondary{background:#fff;border:1px solid var(--border);color:var(--text)}
 .ghost{background:#ffffffaa;border:1px solid var(--border);color:var(--text)}
@@ -84,6 +85,9 @@ label{display:block;margin:12px 0;font-weight:700}
 .ingredient-group-detail li span{font-weight:700}
 .ingredient-group-detail li b{color:var(--brand2);white-space:nowrap}
 .compact-list .compact{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.master-actions{display:flex;gap:6px;flex-shrink:0}
+.use-count{font-size:12px;color:var(--brand2);font-weight:700}
+.use-count.zero{color:var(--muted)}
 .mini-x{border:0;background:transparent;color:#991b1b;padding:0 0 0 6px;font-weight:900}
 .tag-pill .mini-x{font-size:14px}
 
