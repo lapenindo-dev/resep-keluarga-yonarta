@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resep Keluarga Yonarta</title>
+  <meta name="theme-color" content="#f59e0b" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">🍳 Chef Vault</p>
+      <h1>Resep Keluarga Yonarta</h1>
+    </div>
+    <button id="refreshBtn" class="ghost">Refresh</button>
+  </header>
+
+  <main>
+    <section id="home" class="page active">
+      <div class="stats">
+        <div class="card"><b id="totalResep">0</b><span>Total Resep</span></div>
+        <div class="card"><b id="totalFavorit">0</b><span>Favorit</span></div>
+      </div>
+      <button class="primary wide" data-go="add">+ Tambah Resep</button>
+      <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
+      <h2>Resep Terbaru</h2>
+      <div id="latestList" class="list"></div>
+    </section>
+
+    <section id="recipes" class="page">
+      <input id="searchInput" class="search" placeholder="Cari resep, bahan, tag..." />
+      <div class="chips">
+        <button class="chip active" data-filter="">Semua</button>
+        <button class="chip" data-filter="Babi">Babi</button>
+        <button class="chip" data-filter="Ayam">Ayam</button>
+        <button class="chip" data-filter="Sapi">Sapi</button>
+        <button class="chip" data-filter="Seafood">Seafood</button>
+        <button class="chip" data-filter="Sayur">Sayur</button>
+      </div>
+      <div id="recipeList" class="list"></div>
+    </section>
+
+    <section id="add" class="page">
+      <h2 id="formTitle">Tambah Resep</h2>
+      <form id="recipeForm">
+        <input type="hidden" id="recipeId" />
+        <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Samcan Crispy" /></label>
+        <label>Bahan Utama<input id="bahan_utama" placeholder="Babi / Ayam / Sapi" /></label>
+        <label>Jenis Hidangan<input id="jenis_hidangan" placeholder="Panggang / Sup / Mie" /></label>
+        <label>Durasi Menit<input id="durasi_menit" type="number" placeholder="45" /></label>
+        <label>Porsi<input id="porsi" type="number" placeholder="4" /></label>
+        <label>Status<select id="status"><option>Belum Dicoba</option><option>Sudah Dicoba</option><option>Favorit Keluarga</option><option>Resep Andalan</option></select></label>
+        <label>Rating Keluarga<input id="rating_keluarga" type="number" min="0" max="5" value="0" /></label>
+        <label>Bahan<textarea id="bahan" placeholder="Tulis 1 bahan per baris"></textarea></label>
+        <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris"></textarea></label>
+        <label>Tag<input id="tag" placeholder="air fryer, cepat, hemat" /></label>
+        <label>Catatan Yonarta<textarea id="catatan_yonarta"></textarea></label>
+        <label>Link Sumber<input id="link_sumber" placeholder="YouTube / website" /></label>
+        <button class="primary wide" type="submit">Simpan Resep</button>
+        <button class="ghost wide" type="button" id="cancelEdit">Batal</button>
+      </form>
+    </section>
+
+    <section id="plan" class="page">
+      <h2>Jadwal Menu</h2>
+      <label>Jumlah Hari<input id="jumlahHari" type="number" value="7" min="1" /></label>
+      <label>Menu per Hari<input id="menuPerHari" type="number" value="2" min="1" max="3" /></label>
+      <label>Mode Random<select id="modeRandom"><option>Random Semua</option><option>Favorit Keluarga</option><option>Menu Cepat</option><option>Menu Hemat</option></select></label>
+      <button id="generatePlan" class="primary wide">🎲 Buat Jadwal</button>
+      <div id="planResult" class="list"></div>
+    </section>
+
+    <section id="pantry" class="page">
+      <h2>Dapur</h2>
+      <form id="pantryForm" class="inline-form">
+        <input id="pantryName" placeholder="Nama bahan" required />
+        <input id="pantryQty" type="number" placeholder="Jumlah" />
+        <input id="pantryUnit" placeholder="Satuan" />
+        <button class="primary" type="submit">Tambah</button>
+      </form>
+      <div id="pantryList" class="list"></div>
+    </section>
+  </main>
+
+  <nav class="bottomnav">
+    <button class="active" data-go="home">🏠<span>Beranda</span></button>
+    <button data-go="recipes">📖<span>Resep</span></button>
+    <button data-go="add">➕<span>Tambah</span></button>
+    <button data-go="plan">📅<span>Jadwal</span></button>
+    <button data-go="pantry">📦<span>Dapur</span></button>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
