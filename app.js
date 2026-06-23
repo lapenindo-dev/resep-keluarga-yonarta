@@ -90,8 +90,7 @@ async function loadAll(){
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
   if(er) return alert('Gagal ambil resep: ' + er.message);
   recipes = r || [];
-  const {data: p} = await db.from('pantry_items').select('*').order('created_at',{ascending:false});
-  pantry = p || [];
+  
 
   const mi = await db.from('master_ingredients').select('*').order('nama_bahan',{ascending:true});
   if(!mi.error) masterIngredients = mi.data || [];
@@ -104,20 +103,20 @@ async function loadAll(){
 function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
-  renderRecipes(); renderLatest(); renderPantry(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
+  renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
 }
 
 function recipeCard(r){
   const bahan = flatIngredients(r.bahan).slice(0,3).join(', ');
-  const sourceBadge = r.sumber_resep==='YouTube'?'📺 YouTube':(r.sumber_resep==='AI'?'🤖 AI':'✍️ Manual');
+  const sourceBadge = r.sumber_resep ? `<span class="tag-pill source-badge">${r.sumber_resep==='YouTube'?'📺':r.sumber_resep==='AI'?'🤖':'✍️'} ${r.sumber_resep}</span>`:'';
   const photo = r.foto_url ? `<img class="recipe-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" loading="lazy" />` : '';
-  return `<div class="item clickable-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}");}'>${photo}<h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')} · ${escapeHtml(r.status || '-')}</p><p>${sourceBadge}</p><p>${stars(r.rating_keluarga)}</p><p>${escapeHtml(bahan)}</p><div class="actions" onclick="event.stopPropagation()"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
+  return `<div class="item clickable-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}");}'>${photo}<h3>${escapeHtml(r.nama_resep)}</h3>${sourceBadge}<p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')} · ${escapeHtml(r.status || '-')}</p><p>${stars(r.rating_keluarga)}</p><p>${escapeHtml(bahan)}</p><div class="actions" onclick="event.stopPropagation()"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
 }
 
 window.viewRecipe = (id) => {
   const r = recipes.find(x=>x.id===id);
   if(!r) return alert('Resep tidak ditemukan.');
-  const sourceBadge = r.sumber_resep==='YouTube'?'📺 YouTube':(r.sumber_resep==='AI'?'🤖 AI':'✍️ Manual');
+  const sourceBadge = r.sumber_resep ? `<span class="tag-pill source-badge">${r.sumber_resep==='YouTube'?'📺':r.sumber_resep==='AI'?'🤖':'✍️'} ${r.sumber_resep}</span>`:'';
   const photo = r.foto_url ? `<img class="detail-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" />` : '';
   const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada tag</span>';
   $('recipeDetail').innerHTML = `
@@ -130,7 +129,7 @@ window.viewRecipe = (id) => {
         <div><b>Jenis Hidangan</b><span>${escapeHtml(r.jenis_hidangan || '-')}</span></div>
         <div><b>Durasi</b><span>${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : '-'}</span></div>
         <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
-        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div><div><b>Sumber</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
+        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div><div><b>Sumber Resep</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
         <div><b>Sumber</b><span>${r.link_sumber ? `<a href="${escapeHtml(r.link_sumber)}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
       </div>
       <h3>🧂 Bahan</h3>
@@ -156,7 +155,8 @@ function renderRecipes(){
   const filtered = recipes.filter(r => {
     const hay = (JSON.stringify(r) + ' ' + flatIngredients(r.bahan).join(' ')).toLowerCase();
     const okSearch = !q || hay.includes(q);
-    const okFilter = !activeFilter || r.bahan_utama === activeFilter;
+    const sourceFilters=['Manual','YouTube','AI'];
+    const okFilter = !activeFilter || (sourceFilters.includes(activeFilter) ? (r.sumber_resep||'Manual')===activeFilter : r.bahan_utama===activeFilter);
     return okSearch && okFilter;
   });
   $('recipeList').innerHTML = filtered.map(recipeCard).join('') || '<p class="muted">Tidak ada resep.</p>';
@@ -232,7 +232,7 @@ $('recipeForm').onsubmit = async (e)=>{
     catatan_yonarta: $('catatan_yonarta').value.trim(),
     link_sumber: $('link_sumber').value.trim(),
     foto_url: uploadedPhotoUrl || existing?.foto_url || null,
-    sumber_resep: $('sumber_resep').value
+    sumber_resep: $('sumber_resep') ? $('sumber_resep').value : 'Manual'
   };
   const res = id ? await db.from('recipes').update(payload).eq('id', id) : await db.from('recipes').insert(payload);
   if(res.error) return alert('Gagal simpan: ' + res.error.message);
@@ -268,8 +268,6 @@ $('generatePlan').onclick = ()=>{
   $('planResult').innerHTML=html;
 };
 
-$('pantryForm').onsubmit = async (e)=>{e.preventDefault(); const payload={nama_bahan:$('pantryName').value.trim(), jumlah:$('pantryQty').value?Number($('pantryQty').value):null, satuan:$('pantryUnit').value.trim()}; const {error}=await db.from('pantry_items').insert(payload); if(error) return alert(error.message); $('pantryForm').reset(); await loadAll();};
-function renderPantry(){ $('pantryList').innerHTML = pantry.map(p=>`<div class="item"><h3>${escapeHtml(p.nama_bahan)}</h3><p>${p.jumlah||''} ${escapeHtml(p.satuan||'')}</p></div>`).join('') || '<p class="muted">Belum ada stok dapur.</p>'; }
 
 $('masterIngredientForm').onsubmit = async (e)=>{
   e.preventDefault();
