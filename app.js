@@ -481,10 +481,75 @@ function generateShoppingList(){
     });
     html += '</ul></div>';
   });
+  html += '<div class="shop-actions">';
+  html += '<button class="secondary wide" onclick="copyShoppingList()">📋 Copy Teks</button>';
+  html += '<button class="primary wide" onclick="shareShoppingListWA()">💬 Kirim ke WhatsApp</button>';
+  html += '</div>';
   html += '</div>';
   $('shoppingListResult').innerHTML = html;
   $('shoppingListResult').scrollIntoView({ behavior: 'smooth' });
 }
+
+function buildShoppingText(){
+  if(!mealPlan.length) return '';
+  const recipeCounts = {};
+  mealPlan.forEach(d => d.meals.forEach(m => { recipeCounts[m.recipeId] = (recipeCounts[m.recipeId]||0)+1; }));
+  const recipeIds = Object.keys(recipeCounts);
+  const ingredientMap = {};
+  recipeIds.forEach(id => {
+    const r = recipes.find(x=>x.id===id);
+    if(!r||!r.bahan) return;
+    const groups = normalizeIngredientGroups(r.bahan);
+    const mult = recipeCounts[id]||1;
+    groups.forEach(g => (g.items||[]).forEach(item => {
+      if(!item.nama_bahan) return;
+      const key = (item.nama_bahan+'|'+(item.satuan||'')).toLowerCase();
+      if(!ingredientMap[key]){
+        const master = masterIngredients.find(mi=>mi.nama_bahan.toLowerCase()===item.nama_bahan.toLowerCase());
+        ingredientMap[key] = { nama_bahan:item.nama_bahan, jumlah:0, satuan:item.satuan||'', kategori:master?.kategori_bahan||'Lainnya' };
+      }
+      if(item.jumlah) ingredientMap[key].jumlah += Number(item.jumlah)*mult;
+    }));
+  });
+  const items = Object.values(ingredientMap).sort((a,b)=>a.kategori.localeCompare(b.kategori)||a.nama_bahan.localeCompare(b.nama_bahan));
+  const byCategory = {};
+  items.forEach(it => { if(!byCategory[it.kategori]) byCategory[it.kategori]=[]; byCategory[it.kategori].push(it); });
+
+  let text = `🛒 DAFTAR BELANJA\n${mealPlan.length} hari · ${mealPlan.reduce((s,d)=>s+d.meals.length,0)} menu\n\n`;
+  // add menu summary
+  mealPlan.forEach(d => {
+    text += `📅 Hari ${d.day}: `;
+    text += d.meals.map((m,i) => {
+      const r = recipes.find(x=>x.id===m.recipeId);
+      return `${MEAL_LABELS[i]||'Menu'} - ${r?r.nama_resep:'?'}`;
+    }).join(', ') + '\n';
+  });
+  text += '\n';
+  Object.entries(byCategory).forEach(([cat, catItems]) => {
+    text += `── ${cat} ──\n`;
+    catItems.forEach(it => {
+      const qty = it.jumlah ? `${Number.isInteger(it.jumlah)?it.jumlah:it.jumlah.toFixed(1)} ${it.satuan}` : (it.satuan||'secukupnya');
+      text += `☐ ${it.nama_bahan} — ${qty}\n`;
+    });
+    text += '\n';
+  });
+  return text.trim();
+}
+
+window.copyShoppingList = () => {
+  const text = buildShoppingText();
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = event.target;
+    btn.textContent = '✅ Tersalin!';
+    setTimeout(()=>{ btn.textContent = '📋 Copy Teks'; }, 1500);
+  }).catch(()=>alert('Gagal copy. Coba manual.'));
+};
+
+window.shareShoppingListWA = () => {
+  const text = buildShoppingText();
+  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+};
 
 /* ========== MASTER BAHAN ========== */
 
@@ -595,7 +660,10 @@ function renderDashboard(){
 
 function renderGallery(){
   const el=$('galleryGrid'); if(!el) return;
-  el.innerHTML=recipes.filter(r=>r.foto_url).map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><img class="recipe-photo" src="${r.foto_url}"><h3>${r.nama_resep}</h3></div>`).join('') || '<p class="muted">Belum ada foto resep.</p>';
+  const withPhotos = recipes.filter(r=>r.foto_url);
+  el.innerHTML = withPhotos.length
+    ? withPhotos.map(r=>`<div class="gallery-card clickable-card" onclick='viewRecipe("${r.id}")'><img src="${r.foto_url}" alt="${escapeHtml(r.nama_resep)}" loading="lazy"><span>${escapeHtml(r.nama_resep)}</span></div>`).join('')
+    : '<p class="muted">Belum ada foto resep.</p>';
 }
 
 function renderHistory(){
@@ -668,6 +736,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!recipes.length) return;
     const r=recipes[Math.floor(Math.random()*recipes.length)];
     $('randomResult').innerHTML=`<div class="item"><h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.jenis_hidangan||'')} · ${escapeHtml(r.bahan_utama||'')}</p><button class="primary" onclick='viewRecipe("${r.id}")'>Lihat Resep</button></div>`;
+  });
+
+  // PWA install prompt
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const banner = $('installBanner');
+    if(banner) banner.style.display = 'flex';
+  });
+
+  const installBtn = $('installBtn');
+  const installDismiss = $('installDismiss');
+  if(installBtn) installBtn.addEventListener('click', async () => {
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('Install:', outcome);
+    deferredPrompt = null;
+    $('installBanner').style.display = 'none';
+  });
+  if(installDismiss) installDismiss.addEventListener('click', () => {
+    $('installBanner').style.display = 'none';
+    deferredPrompt = null;
   });
 
   // Init
