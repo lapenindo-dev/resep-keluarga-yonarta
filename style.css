@@ -22,3 +22,7 @@
 .photo-modal.active{display:flex}
 .photo-modal img{max-width:100%;max-height:88vh;object-fit:contain;border-radius:18px;box-shadow:0 20px 60px #00000080}
 .photo-modal-close{position:fixed;top:14px;right:14px;width:44px;height:44px;border-radius:999px;background:#ffffff;color:#111827;font-size:28px;line-height:1;padding:0}
+
+
+/* v0.3.8 Masak Apa Hari Ini */
+.quick-random-card{margin:10px 0 14px}.random-result{margin-top:8px}.random-pick h3{font-size:22px;margin-bottom:6px}.random-pick .eyebrow{color:var(--brand);font-weight:800}

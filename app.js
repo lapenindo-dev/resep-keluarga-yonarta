@@ -332,3 +332,27 @@ window.closePhotoModal = () => {
 document.addEventListener('keydown', (event) => {
   if(event.key === 'Escape') closePhotoModal();
 });
+
+
+function pickRandomRecipe(){
+  if(!recipes.length){
+    const el = $('randomRecipeResult');
+    if(el) el.innerHTML = '<p class="muted">Belum ada resep untuk diacak.</p>';
+    return;
+  }
+  const pool = [...recipes];
+  const r = pool[Math.floor(Math.random() * pool.length)];
+  const el = $('randomRecipeResult');
+  if(!el) return;
+  const durasi = r.durasi_menit ? `${escapeHtml(r.durasi_menit)} menit` : 'Durasi belum diisi';
+  el.innerHTML = `
+    <div class="item random-pick">
+      <p class="eyebrow">Rekomendasi hari ini</p>
+      <h3>${escapeHtml(r.nama_resep)}</h3>
+      <p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')}</p>
+      <p>${stars(r.rating_keluarga)} · ${durasi}</p>
+      <button class="secondary wide" type="button" onclick='viewRecipe("${r.id}")'>Lihat Resep</button>
+    </div>`;
+}
+
+if($('randomRecipeBtn')) $('randomRecipeBtn').onclick = pickRandomRecipe;
