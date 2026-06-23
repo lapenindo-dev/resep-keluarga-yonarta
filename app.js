@@ -4,7 +4,6 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PHOTO_BUCKET = 'recipe-photos';
 
 let recipes = [];
-let pantry = [];
 let masterIngredients = [];
 let masterUnits = [];
 let activeFilter = '';
@@ -106,8 +105,6 @@ async function loadAll(){
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
   if(er) return alert('Gagal ambil resep: ' + er.message);
   recipes = r || [];
-  const {data: p} = await db.from('pantry_items').select('*').order('created_at',{ascending:false});
-  pantry = p || [];
 
   const mi = await db.from('master_ingredients').select('*').order('nama_bahan',{ascending:true});
   if(!mi.error) masterIngredients = mi.data || [];
@@ -121,7 +118,7 @@ async function loadAll(){
 function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
-  renderRecipes(); renderLatest(); renderPantry(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
+  renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
 }
 
 function recipeCard(r){
@@ -282,8 +279,6 @@ $('generatePlan').onclick = ()=>{
   $('planResult').innerHTML=html;
 };
 
-$('pantryForm').onsubmit = async (e)=>{e.preventDefault(); const payload={nama_bahan:$('pantryName').value.trim(), jumlah:$('pantryQty').value?Number($('pantryQty').value):null, satuan:$('pantryUnit').value.trim()}; const {error}=await db.from('pantry_items').insert(payload); if(error) return alert(error.message); $('pantryForm').reset(); await loadAll();};
-function renderPantry(){ $('pantryList').innerHTML = pantry.map(p=>`<div class="item"><h3>${escapeHtml(p.nama_bahan)}</h3><p>${p.jumlah||''} ${escapeHtml(p.satuan||'')}</p></div>`).join('') || '<p class="muted">Belum ada stok dapur.</p>'; }
 
 $('masterIngredientForm').onsubmit = async (e)=>{
   e.preventDefault();
