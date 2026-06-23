@@ -4,6 +4,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PHOTO_BUCKET = 'recipe-photos';
 
 let recipes = [];
+let pantry = [];
 let masterIngredients = [];
 let masterUnits = [];
 let activeFilter = '';
@@ -75,23 +76,7 @@ function go(page){
 }
 
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
-$('refreshBtn').onclick = async () => {
-  const btn = $('refreshBtn');
-  const original = btn.textContent;
-  try {
-    btn.disabled = true;
-    btn.textContent = '⏳ Memuat...';
-    await loadAll();
-    btn.textContent = '✅ Selesai';
-  } catch(err){
-    console.error(err);
-    btn.textContent = '❌ Gagal';
-  }
-  setTimeout(()=>{
-    btn.textContent = original;
-    btn.disabled = false;
-  },1200);
-};
+$('refreshBtn').onclick = loadAll;
 $('backToRecipes').onclick = () => go('recipes');
 $('cancelEdit').onclick = () => { resetForm(); go('home'); window.scrollTo({top:0, behavior:'smooth'}); };
 $('foto_file').addEventListener('change', () => {
@@ -105,6 +90,8 @@ async function loadAll(){
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
   if(er) return alert('Gagal ambil resep: ' + er.message);
   recipes = r || [];
+  const {data: p} = await db.from('pantry_items').select('*').order('created_at',{ascending:false});
+  pantry = p || [];
 
   const mi = await db.from('master_ingredients').select('*').order('nama_bahan',{ascending:true});
   if(!mi.error) masterIngredients = mi.data || [];
@@ -112,25 +99,26 @@ async function loadAll(){
   masterUnits = mu.error ? DEFAULT_UNITS.map(x=>({nama_satuan:x})) : (mu.data || []);
   if(!masterUnits.length) masterUnits = DEFAULT_UNITS.map(x=>({nama_satuan:x}));
   render();
-  const syncEl = $('lastSync'); if(syncEl) syncEl.textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID');
 }
 
 function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
-  renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
+  renderRecipes(); renderLatest(); renderPantry(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
 }
 
 function recipeCard(r){
   const bahan = flatIngredients(r.bahan).slice(0,3).join(', ');
+  const sourceBadge = r.sumber_resep==='YouTube'?'📺 YouTube':(r.sumber_resep==='AI'?'🤖 AI':'✍️ Manual');
   const photo = r.foto_url ? `<img class="recipe-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" loading="lazy" />` : '';
-  return `<div class="item clickable-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}");}'>${photo}<h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')} · ${escapeHtml(r.status || '-')}</p><p>${stars(r.rating_keluarga)}</p><p>${escapeHtml(bahan)}</p><div class="actions" onclick="event.stopPropagation()"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
+  return `<div class="item clickable-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}");}'>${photo}<h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')} · ${escapeHtml(r.status || '-')}</p><p>${sourceBadge}</p><p>${stars(r.rating_keluarga)}</p><p>${escapeHtml(bahan)}</p><div class="actions" onclick="event.stopPropagation()"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
 }
 
 window.viewRecipe = (id) => {
   const r = recipes.find(x=>x.id===id);
   if(!r) return alert('Resep tidak ditemukan.');
-  const photo = r.foto_url ? `<img class="detail-photo clickable-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" onclick="openPhotoModal('${escapeHtml(r.foto_url)}')" />` : '';
+  const sourceBadge = r.sumber_resep==='YouTube'?'📺 YouTube':(r.sumber_resep==='AI'?'🤖 AI':'✍️ Manual');
+  const photo = r.foto_url ? `<img class="detail-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" />` : '';
   const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada tag</span>';
   $('recipeDetail').innerHTML = `
     ${photo}
@@ -142,7 +130,7 @@ window.viewRecipe = (id) => {
         <div><b>Jenis Hidangan</b><span>${escapeHtml(r.jenis_hidangan || '-')}</span></div>
         <div><b>Durasi</b><span>${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : '-'}</span></div>
         <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
-        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div>
+        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div><div><b>Sumber</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
         <div><b>Sumber</b><span>${r.link_sumber ? `<a href="${escapeHtml(r.link_sumber)}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
       </div>
       <h3>🧂 Bahan</h3>
@@ -243,7 +231,8 @@ $('recipeForm').onsubmit = async (e)=>{
     tag: csvArray($('tag').value),
     catatan_yonarta: $('catatan_yonarta').value.trim(),
     link_sumber: $('link_sumber').value.trim(),
-    foto_url: uploadedPhotoUrl || existing?.foto_url || null
+    foto_url: uploadedPhotoUrl || existing?.foto_url || null,
+    sumber_resep: $('sumber_resep').value
   };
   const res = id ? await db.from('recipes').update(payload).eq('id', id) : await db.from('recipes').insert(payload);
   if(res.error) return alert('Gagal simpan: ' + res.error.message);
@@ -253,7 +242,7 @@ $('recipeForm').onsubmit = async (e)=>{
 window.editRecipe = (id)=>{
   const r = recipes.find(x=>x.id===id); if(!r) return;
   $('formTitle').textContent='Edit Resep'; $('recipeId').value=r.id;
-  ['nama_resep','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber'].forEach(k=>$(k).value=r[k]||'');
+  ['nama_resep','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','sumber_resep'].forEach(k=>$(k).value=r[k]||'');
   $('durasi_menit').value=r.durasi_menit||''; $('porsi').value=r.porsi||''; $('rating_keluarga').value=r.rating_keluarga||0;
   ingredientGroupsState = normalizeIngredientGroups(r.bahan);
   renderIngredientGroups();
@@ -279,6 +268,8 @@ $('generatePlan').onclick = ()=>{
   $('planResult').innerHTML=html;
 };
 
+$('pantryForm').onsubmit = async (e)=>{e.preventDefault(); const payload={nama_bahan:$('pantryName').value.trim(), jumlah:$('pantryQty').value?Number($('pantryQty').value):null, satuan:$('pantryUnit').value.trim()}; const {error}=await db.from('pantry_items').insert(payload); if(error) return alert(error.message); $('pantryForm').reset(); await loadAll();};
+function renderPantry(){ $('pantryList').innerHTML = pantry.map(p=>`<div class="item"><h3>${escapeHtml(p.nama_bahan)}</h3><p>${p.jumlah||''} ${escapeHtml(p.satuan||'')}</p></div>`).join('') || '<p class="muted">Belum ada stok dapur.</p>'; }
 
 $('masterIngredientForm').onsubmit = async (e)=>{
   e.preventDefault();
@@ -306,48 +297,42 @@ resetForm();
 loadAll();
 
 
-window.openPhotoModal = (url) => {
-  const modal = $('photoModal');
-  const img = $('photoModalImg');
-  if(!modal || !img || !url) return;
-  img.src = url;
-  modal.classList.add('active');
-  modal.setAttribute('aria-hidden', 'false');
+let recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]');
+
+const oldViewRecipe = window.viewRecipe;
+window.viewRecipe = (id)=>{
+  recipeHistory = [id, ...recipeHistory.filter(x=>x!==id)].slice(0,10);
+  localStorage.setItem('recipeHistory', JSON.stringify(recipeHistory));
+  oldViewRecipe(id);
+  renderHistory();
 };
 
-window.closePhotoModal = () => {
-  const modal = $('photoModal');
-  const img = $('photoModalImg');
-  if(!modal || !img) return;
-  modal.classList.remove('active');
-  modal.setAttribute('aria-hidden', 'true');
-  img.removeAttribute('src');
-};
-
-document.addEventListener('keydown', (event) => {
-  if(event.key === 'Escape') closePhotoModal();
-});
-
-
-function pickRandomRecipe(){
-  if(!recipes.length){
-    const el = $('randomRecipeResult');
-    if(el) el.innerHTML = '<p class="muted">Belum ada resep untuk diacak.</p>';
-    return;
-  }
-  const pool = [...recipes];
-  const r = pool[Math.floor(Math.random() * pool.length)];
-  const el = $('randomRecipeResult');
-  if(!el) return;
-  const durasi = r.durasi_menit ? `${escapeHtml(r.durasi_menit)} menit` : 'Durasi belum diisi';
-  el.innerHTML = `
-    <div class="item random-pick">
-      <p class="eyebrow">Rekomendasi hari ini</p>
-      <h3>${escapeHtml(r.nama_resep)}</h3>
-      <p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')}</p>
-      <p>${stars(r.rating_keluarga)} · ${durasi}</p>
-      <button class="secondary wide" type="button" onclick='viewRecipe("${r.id}")'>Lihat Resep</button>
-    </div>`;
+function renderDashboard(){
+ if(document.getElementById('dash5star'))
+  document.getElementById('dash5star').textContent = recipes.filter(r=>Number(r.rating_keluarga)===5).length;
+ if(document.getElementById('dashLatest'))
+  document.getElementById('dashLatest').textContent = Math.min(recipes.length,5);
 }
 
-if($('randomRecipeBtn')) $('randomRecipeBtn').onclick = pickRandomRecipe;
+function renderGallery(){
+ const el=document.getElementById('galleryGrid'); if(!el) return;
+ el.innerHTML=recipes.filter(r=>r.foto_url).map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><img class="recipe-photo" src="${r.foto_url}"><h3>${r.nama_resep}</h3></div>`).join('');
+}
+
+function renderHistory(){
+ const el=document.getElementById('historyList'); if(!el) return;
+ const data=recipeHistory.map(id=>recipes.find(r=>r.id===id)).filter(Boolean);
+ el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${r.nama_resep}</h3></div>`).join('')||'<p class="muted">Belum ada riwayat.</p>';
+}
+
+setTimeout(()=>{
+ const btn=document.getElementById('randomRecipeBtn');
+ if(btn) btn.onclick=()=>{
+   if(!recipes.length) return;
+   const r=recipes[Math.floor(Math.random()*recipes.length)];
+   document.getElementById('randomResult').innerHTML=`<div class="item"><h3>${r.nama_resep}</h3><p>${r.jenis_hidangan||''}</p><button class="primary" onclick='viewRecipe("${r.id}")'>Lihat Resep</button></div>`;
+ };
+},500);
+
+const oldRender = render;
+render = function(){ oldRender(); renderDashboard(); renderGallery(); renderHistory(); }
