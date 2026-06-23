@@ -76,7 +76,23 @@ function go(page){
 }
 
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
-$('refreshBtn').onclick = loadAll;
+$('refreshBtn').onclick = async () => {
+  const btn = $('refreshBtn');
+  const original = btn.textContent;
+  try {
+    btn.disabled = true;
+    btn.textContent = '⏳ Memuat...';
+    await loadAll();
+    btn.textContent = '✅ Selesai';
+  } catch(err){
+    console.error(err);
+    btn.textContent = '❌ Gagal';
+  }
+  setTimeout(()=>{
+    btn.textContent = original;
+    btn.disabled = false;
+  },1200);
+};
 $('backToRecipes').onclick = () => go('recipes');
 $('cancelEdit').onclick = () => { resetForm(); go('home'); window.scrollTo({top:0, behavior:'smooth'}); };
 $('foto_file').addEventListener('change', () => {
@@ -99,6 +115,7 @@ async function loadAll(){
   masterUnits = mu.error ? DEFAULT_UNITS.map(x=>({nama_satuan:x})) : (mu.data || []);
   if(!masterUnits.length) masterUnits = DEFAULT_UNITS.map(x=>({nama_satuan:x}));
   render();
+  const syncEl = $('lastSync'); if(syncEl) syncEl.textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID');
 }
 
 function render(){
