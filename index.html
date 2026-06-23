@@ -93,7 +93,15 @@
             <option value="5">⭐⭐⭐⭐⭐ 5 / 5</option>
           </select>
         </label>
-        <label>Bahan<textarea id="bahan" placeholder="Tulis 1 bahan per baris"></textarea></label>
+        <div class="ingredients-editor">
+          <div class="section-title-row">
+            <h3>🧂 Bahan Terstruktur</h3>
+            <button class="secondary small" type="button" id="addIngredientGroup">+ Grup Bahan</button>
+          </div>
+          <p class="hint">Isi bahan per grup supaya nanti daftar belanja bisa dihitung otomatis.</p>
+          <datalist id="ingredientOptions"></datalist>
+          <div id="ingredientGroups"></div>
+        </div>
         <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris"></textarea></label>
         <label>Tag<input id="tag" placeholder="air fryer, cepat, hemat" /></label>
         <label>Catatan Yonarta<textarea id="catatan_yonarta"></textarea></label>
@@ -119,6 +127,32 @@
       <div id="planResult" class="list"></div>
     </section>
 
+    <section id="master" class="page">
+      <h2>Master Bahan</h2>
+      <p class="muted">Daftar nama bahan standar agar tidak terjadi duplikasi seperti “bawang putih”, “Bawang Putih”, dan “bawang putih lokal”.</p>
+      <form id="masterIngredientForm" class="inline-form">
+        <input id="masterIngredientName" placeholder="Nama bahan, contoh: Bawang Putih" required />
+        <select id="masterIngredientCategory">
+          <option>Bumbu</option>
+          <option>Daging</option>
+          <option>Sayur</option>
+          <option>Karbohidrat</option>
+          <option>Buah</option>
+          <option>Lainnya</option>
+        </select>
+        <button class="primary" type="submit">Tambah</button>
+      </form>
+      <div id="masterIngredientList" class="list compact-list"></div>
+
+      <h2>Master Satuan</h2>
+      <p class="muted">Dipakai sebagai pilihan satuan pada bahan resep.</p>
+      <form id="masterUnitForm" class="inline-form">
+        <input id="masterUnitName" placeholder="Contoh: kg, siung, sdm" required />
+        <button class="primary" type="submit">Tambah</button>
+      </form>
+      <div id="masterUnitList" class="tags"></div>
+    </section>
+
     <section id="pantry" class="page">
       <h2>Dapur</h2>
       <form id="pantryForm" class="inline-form">
@@ -136,6 +170,7 @@
     <button data-go="recipes">📖<span>Resep</span></button>
     <button data-go="add">➕<span>Tambah</span></button>
     <button data-go="plan">📅<span>Jadwal</span></button>
+    <button data-go="master">📚<span>Bahan</span></button>
     <button data-go="pantry">📦<span>Dapur</span></button>
   </nav>
 
