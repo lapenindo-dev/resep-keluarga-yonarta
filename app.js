@@ -18,7 +18,7 @@ function go(page){
 
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 $('refreshBtn').onclick = loadAll;
-$('cancelEdit').onclick = resetForm;
+$('cancelEdit').onclick = () => { resetForm(); go('recipes'); window.scrollTo({top:0, behavior:'smooth'}); };
 
 async function loadAll(){
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
