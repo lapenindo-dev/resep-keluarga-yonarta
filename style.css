@@ -14,3 +14,11 @@
 .bottomnav{grid-template-columns:repeat(6,1fr)}
 .bottomnav button{font-size:18px;padding:7px 2px}.bottomnav span{font-size:10px}
 .section-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}.section-title-row h3{margin:0}.small{padding:8px 10px;border-radius:10px;font-size:13px}.ingredients-editor{background:#fff;border:1px solid var(--border);border-radius:18px;padding:14px;margin:14px 0}.ingredient-group{border:1px solid var(--border);background:#fff7ed;border-radius:16px;padding:12px;margin:12px 0}.ingredient-group-head{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}.ingredient-group-head select{margin-top:0;font-weight:800}.ingredient-row{display:grid;grid-template-columns:1.4fr .75fr .9fr auto;gap:8px;align-items:center;margin-top:10px}.ingredient-row input,.ingredient-row select{margin-top:0}.ingredient-group-detail{background:#fff7ed;border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}.ingredient-group-detail h4{margin:0 0 8px}.ingredient-group-detail ul{list-style:none;padding:0;margin:0}.ingredient-group-detail li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--border)}.ingredient-group-detail li:last-child{border-bottom:0}.ingredient-group-detail li span{font-weight:700}.ingredient-group-detail li b{color:var(--brand2);white-space:nowrap}.compact-list .compact{display:flex;justify-content:space-between;gap:12px;align-items:center}.mini-x{border:0;background:transparent;color:#991b1b;padding:0 0 0 6px;font-weight:900}.tag-pill .mini-x{font-size:14px}@media(max-width:520px){.ingredient-group-head{grid-template-columns:1fr}.ingredient-row{grid-template-columns:1fr 80px 1fr auto}.inline-form{grid-template-columns:1fr}.bottomnav span{font-size:9px}}
+
+
+/* v0.3.7 Fullscreen Foto Resep */
+.clickable-photo{cursor:zoom-in}
+.photo-modal{position:fixed;inset:0;background:#000000d9;display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.photo-modal.active{display:flex}
+.photo-modal img{max-width:100%;max-height:88vh;object-fit:contain;border-radius:18px;box-shadow:0 20px 60px #00000080}
+.photo-modal-close{position:fixed;top:14px;right:14px;width:44px;height:44px;border-radius:999px;background:#ffffff;color:#111827;font-size:28px;line-height:1;padding:0}

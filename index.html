@@ -25,8 +25,6 @@
       </div>
       <button class="primary wide" data-go="add">+ Tambah Resep</button>
       <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
-      <button class="ghost wide" id="randomRecipeBtn">🎲 Masak Apa Hari Ini?</button>
-      <div id="randomResult"></div>
       <h2>Resep Terbaru</h2>
       <div id="latestList" class="list"></div>
     </section>
@@ -165,9 +163,7 @@
       </form>
       <div id="pantryList" class="list"></div>
     </section>
-  
-<section id="history" class="page"><h2>Riwayat Resep</h2><div id="historyList" class="list"></div></section>
-</main>
+  </main>
 
   <nav class="bottomnav">
     <button class="active" data-go="home">🏠<span>Beranda</span></button>
@@ -175,8 +171,14 @@
     <button data-go="add">➕<span>Tambah</span></button>
     <button data-go="plan">📅<span>Jadwal</span></button>
     <button data-go="master">📚<span>Bahan</span></button>
-    <button data-go="pantry">📦<span>Dapur</span></button><button data-go="history">🕒<span>Riwayat</span></button>
+    <button data-go="pantry">📦<span>Dapur</span></button>
   </nav>
+
+
+  <div id="photoModal" class="photo-modal" onclick="closePhotoModal()" aria-hidden="true">
+    <button class="photo-modal-close" type="button" onclick="closePhotoModal()">×</button>
+    <img id="photoModalImg" alt="Foto resep fullscreen" />
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>

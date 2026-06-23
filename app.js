@@ -133,7 +133,7 @@ function recipeCard(r){
 window.viewRecipe = (id) => {
   const r = recipes.find(x=>x.id===id);
   if(!r) return alert('Resep tidak ditemukan.');
-  const photo = r.foto_url ? `<img class="detail-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" />` : '';
+  const photo = r.foto_url ? `<img class="detail-photo clickable-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" onclick="openPhotoModal('${escapeHtml(r.foto_url)}')" />` : '';
   const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada tag</span>';
   $('recipeDetail').innerHTML = `
     ${photo}
@@ -310,20 +310,25 @@ function renderMasterUnits(){
 resetForm();
 loadAll();
 
-let recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]');
-function renderHistory(){
- const el=document.getElementById('historyList'); if(!el) return;
- el.innerHTML=recipeHistory.map(id=>{const r=recipes.find(x=>x.id===id); return r?`<div class="item" onclick='viewRecipe("${r.id}")'><h3>${r.nama_resep}</h3></div>`:''}).join('')||'<p class="muted">Belum ada.</p>';
-}
-document.getElementById('randomRecipeBtn')?.addEventListener('click',()=>{
- if(!recipes.length) return;
- const r=recipes[Math.floor(Math.random()*recipes.length)];
- document.getElementById('randomResult').innerHTML=`<div class="item"><h3>${r.nama_resep}</h3><p>${r.durasi_menit||'-'} menit</p></div>`;
+
+window.openPhotoModal = (url) => {
+  const modal = $('photoModal');
+  const img = $('photoModalImg');
+  if(!modal || !img || !url) return;
+  img.src = url;
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
+};
+
+window.closePhotoModal = () => {
+  const modal = $('photoModal');
+  const img = $('photoModalImg');
+  if(!modal || !img) return;
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  img.removeAttribute('src');
+};
+
+document.addEventListener('keydown', (event) => {
+  if(event.key === 'Escape') closePhotoModal();
 });
-const _oldView=window.viewRecipe;
-window.viewRecipe=(id)=>{
- recipeHistory=[id,...recipeHistory.filter(x=>x!==id)].slice(0,10);
- localStorage.setItem('recipeHistory',JSON.stringify(recipeHistory));
- _oldView(id); renderHistory();
-}
-setTimeout(renderHistory,500);
