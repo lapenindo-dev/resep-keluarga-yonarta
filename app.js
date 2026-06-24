@@ -1,6 +1,6 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.1.3
-   Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
+   Resep Keluarga Yonarta v2.1.7
+   Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
 const SUPABASE_URL = 'https://eswokjdhyktikcxranpo.supabase.co';
@@ -9,7 +9,7 @@ let db;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
 catch(e){ console.error('Supabase init gagal:', e); }
 const PHOTO_BUCKET = 'recipe-photos';
-// v2.1.3: backup/import JSON disembunyikan dari user keluarga.
+// v2.1.7: audit table/UI bugfix + backup/import JSON disembunyikan dari user keluarga.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -42,6 +42,8 @@ const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean
 const csvArray = (v) => (v || '').split(',').map(x => x.trim()).filter(Boolean);
 const stars = (n) => n > 0 ? '⭐'.repeat(Math.min(Number(n)||0, 5)) : 'Belum ada rating';
 const escapeHtml = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const safeExternalUrl = (url='') => { try { const u = new URL(String(url), window.location.origin); return ['http:', 'https:'].includes(u.protocol) ? u.href : ''; } catch(e){ return ''; } };
+const encArg = (v='') => encodeURIComponent(String(v));
 const displayIngredient = (it) => `${it.nama_bahan || ''}${it.jumlah ? ' - ' + it.jumlah : ''}${it.satuan ? ' ' + it.satuan : ''}`.trim();
 
 /* ---------- Auth helpers ---------- */
@@ -247,7 +249,7 @@ function renderExtraPhotosPreview(){
   if(!el) return;
   el.innerHTML = extraPhotosState.map((url, i) => `
     <div class="extra-thumb">
-      <img src="${url}" alt="Foto tambahan ${i+1}" />
+      <img src="${url}" alt="Foto resep/tambahan ${i+1}" />
       <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
     </div>`).join('');
 }
@@ -426,6 +428,7 @@ window.viewRecipe = (id) => {
     : '<span class="muted">Belum pernah ditandai dimasak</span>';
 
   const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada tag</span>';
+  const safeLink = r.link_sumber ? safeExternalUrl(r.link_sumber) : '';
   $('recipeDetail').innerHTML = `
     ${photoBlock}
     <div class="detail-card">
@@ -448,7 +451,7 @@ window.viewRecipe = (id) => {
         <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
         <div><b>Dimasak Oleh</b><span>${escapeHtml(r.dimasak_oleh || '-')}</span></div>
         <div><b>Sumber</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
-        <div><b>Link</b><span>${r.link_sumber ? `<a href="${escapeHtml(r.link_sumber)}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
+        <div><b>Link</b><span>${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
       </div>
       <h3>🧂 Bahan</h3>
       <div class="recipe-content grouped-ingredients">${ingredientsDetailHtml(r.bahan)}</div>
@@ -1142,12 +1145,12 @@ function applyExtractedRecipe(recipe, sourceLabel){
 
 async function handleAiExtractPhoto(){
   const files = Array.from($('aiPhotoInput').files || []);
-  if(!files.length) return setAiStatus('Pilih minimal 1 foto dulu.', 'error');
+  if(!files.length) return setAiStatus('Pilih minimal 1 foto resep dulu.', 'error');
   setAiStatus(`⏳ Mengompres ${files.length} foto...`, 'loading');
   try {
     const images = await Promise.all(files.map(f => compressImageFile(f)));
     const totalKB = images.reduce((sum, img) => sum + estimateBase64SizeKB(img), 0);
-    setAiStatus(`⏳ Membaca ${files.length} foto (~${totalKB} KB) dengan AI...`, 'loading');
+    setAiStatus(`⏳ Membaca ${files.length} foto resep (~${totalKB} KB) dengan AI...`, 'loading');
     const recipe = await callExtractRecipeApi({ mode: 'photo', imagesBase64: images });
     applyExtractedRecipe(recipe, 'AI');
   } catch(err){
@@ -1368,13 +1371,13 @@ function renderGallery(){
   const withPhotos = recipes.filter(r=>r.foto_url);
   el.innerHTML = withPhotos.length
     ? withPhotos.map(r=>`<div class="gallery-card clickable-card" onclick='viewRecipe("${r.id}")'><img src="${r.foto_url}" alt="${escapeHtml(r.nama_resep)}" loading="lazy"><span>${escapeHtml(r.nama_resep)}</span></div>`).join('')
-    : '<p class="muted">Belum ada foto resep.</p>';
+    : '<p class="muted">Belum ada foto masakan.</p>';
 }
 
 function renderHistory(){
   const el=$('historyList'); if(!el) return;
   const data=recipeHistory.map(id=>recipes.find(r=>r.id===id)).filter(Boolean);
-  el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${r.nama_resep}</h3><p>${escapeHtml(r.bahan_utama||'')} · ${escapeHtml(r.jenis_hidangan||'')}</p></div>`).join('')||'<p class="muted">Belum ada riwayat.</p>';
+  el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama||'')} · ${escapeHtml(r.jenis_hidangan||'')}</p></div>`).join('')||'<p class="muted">Belum ada riwayat.</p>';
 }
 
 
@@ -1448,12 +1451,12 @@ function renderCollections(){
     const rows = ids.map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(r => `
       <div class="collection-recipe-row">
         <span onclick='viewRecipe("${r.id}")'>${escapeHtml(r.nama_resep)}</span>
-        <button class="ghost small" onclick='removeRecipeFromCollection("${escapeHtml(name)}","${r.id}")'>×</button>
+        <button class="ghost small" onclick='removeRecipeFromCollection(decodeURIComponent("${encArg(name)}"),"${r.id}")'>×</button>
       </div>`).join('');
     return `<div class="item compact collection-card">
       <div class="collection-head">
         <div><h3>📁 ${escapeHtml(name)}</h3><p>${ids.length} resep</p></div>
-        <button class="danger small" onclick='deleteCollection("${escapeHtml(name)}")'>Hapus</button>
+        <button class="danger small" onclick='deleteCollection(decodeURIComponent("${encArg(name)}"))'>Hapus</button>
       </div>
       <div class="collection-recipe-list">${rows || '<p class="muted">Belum ada resep. Buka detail resep untuk memasukkan ke koleksi ini.</p>'}</div>
     </div>`;
@@ -1485,7 +1488,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga Yonarta',
-    version: '2.1.3',
+    version: '2.1.7',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1576,7 +1579,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Catatan</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.1.3</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.1.7</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -1641,7 +1644,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingHtml = files.map(f => `<div class="extra-thumb pending"><img src="${URL.createObjectURL(f)}" alt="Baru" /><span class="pending-badge">Baru</span></div>`).join('');
     el.innerHTML = extraPhotosState.map((url, i) => `
       <div class="extra-thumb">
-        <img src="${url}" alt="Foto tambahan ${i+1}" />
+        <img src="${url}" alt="Foto resep/tambahan ${i+1}" />
         <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
       </div>`).join('') + pendingHtml;
   });
@@ -1741,7 +1744,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('aiPhotoInput').addEventListener('change', () => {
     const files = Array.from($('aiPhotoInput').files || []);
     $('aiPhotoPreview').innerHTML = files.map(f => `<div class="extra-thumb"><img src="${URL.createObjectURL(f)}" alt="Foto AI" /></div>`).join('');
-    setAiStatus(files.length ? `${files.length} foto siap diekstrak.` : null, 'loading');
+    setAiStatus(files.length ? `${files.length} foto resep siap diekstrak.` : null, 'loading');
   });
 
   // Default collections
@@ -1756,5 +1759,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.1.3 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.1.7 loaded');
 });
