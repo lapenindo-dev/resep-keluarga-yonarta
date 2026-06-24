@@ -67,63 +67,188 @@ async function callQwen({ model, messages }) {
   return content;
 }
 
-function extractYouTubeId(url) {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
-    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
+function extractYouTubeId(input) {
+  if (!input || typeof input !== 'string') return null;
+  const raw = input.trim();
+
+  try {
+    const url = new URL(raw.includes('://') ? raw : `https://${raw}`);
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+
+    if (host === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0];
+      return /^[a-zA-Z0-9_-]{11}$/.test(id || '') ? id : null;
+    }
+
+    if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+      const watchId = url.searchParams.get('v');
+      if (/^[a-zA-Z0-9_-]{11}$/.test(watchId || '')) return watchId;
+
+      const parts = url.pathname.split('/').filter(Boolean);
+      const idx = parts.findIndex(x => ['shorts', 'embed', 'live', 'v'].includes(x));
+      if (idx !== -1 && /^[a-zA-Z0-9_-]{11}$/.test(parts[idx + 1] || '')) return parts[idx + 1];
+    }
+  } catch (e) {
+    // fallback regex below
+  }
+
+  const m = raw.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function decodeHtmlEntities(str = '') {
+  return String(str)
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function findBalancedJsonAfter(html, marker) {
+  const markerIndex = html.indexOf(marker);
+  if (markerIndex === -1) return null;
+  const start = html.indexOf('{', markerIndex);
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = start; i < html.length; i++) {
+    const ch = html[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === '\\') escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return html.slice(start, i + 1);
+    }
   }
   return null;
 }
 
+function getCaptionTracksFromHtml(html) {
+  // Cara 1: parse object resmi player response. Lebih tahan dibanding regex captionTracks lama.
+  const jsonText = findBalancedJsonAfter(html, 'ytInitialPlayerResponse');
+  if (jsonText) {
+    try {
+      const player = JSON.parse(jsonText);
+      const tracks = player?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      if (Array.isArray(tracks) && tracks.length) return tracks;
+    } catch (e) {
+      // lanjut fallback regex
+    }
+  }
+
+  // Cara 2: fallback regex, dengan batas yang lebih aman.
+  const match = html.match(/"captionTracks":(\[.*?\])(?:,"audioTracks"|,"translationLanguages"|,"defaultAudioTrackIndex"|})/);
+  if (match) {
+    try {
+      const jsonStr = match[1].replace(/\\u0026/g, '&');
+      const tracks = JSON.parse(jsonStr);
+      if (Array.isArray(tracks) && tracks.length) return tracks;
+    } catch (e) {
+      // lanjut fallback endpoint timedtext
+    }
+  }
+
+  return [];
+}
+
+async function readCaptionTrack(baseUrl) {
+  const url = baseUrl.includes('fmt=') ? baseUrl : `${baseUrl}&fmt=json3`;
+  const resp = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
+    }
+  });
+  if (!resp.ok) throw new Error(`Caption HTTP ${resp.status}`);
+
+  const body = await resp.text();
+  try {
+    const data = JSON.parse(body);
+    return (data.events || [])
+      .flatMap(e => (e.segs || []).map(s => s.utf8 || ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  } catch (e) {
+    // Kadang YouTube mengembalikan XML; baca seadanya.
+    return decodeHtmlEntities(
+      body
+        .replace(/<\/?[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    );
+  }
+}
+
+async function tryDirectTimedText(videoId) {
+  const candidates = [
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=id&fmt=json3`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=id&kind=asr&fmt=json3`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`
+  ];
+
+  for (const url of candidates) {
+    try {
+      const text = await readCaptionTrack(url);
+      if (text && text.length > 30) return text;
+    } catch (e) {
+      // coba kandidat berikutnya
+    }
+  }
+  return '';
+}
+
 async function fetchYouTubeTranscript(videoUrl) {
   const videoId = extractYouTubeId(videoUrl);
-  if (!videoId) throw new Error('Link YouTube tidak valid.');
+  if (!videoId) {
+    throw new Error('Link YouTube tidak valid. Pastikan link berisi video ID 11 karakter, contoh: https://youtu.be/xxxxxxxxxxx');
+  }
 
-  const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+  const pageUrl = `https://www.youtube.com/watch?v=${videoId}&hl=id&persist_hl=1&bpctr=9999999999&has_verified=1`;
+  const pageResp = await fetch(pageUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
       'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-      // Bypass EU/regional consent redirect page that lacks captionTracks
-      'Cookie': 'CONSENT=YES+1'
+      'Cookie': 'CONSENT=YES+1; SOCS=CAI'
     }
   });
 
   if (pageResp.status === 429 || pageResp.status === 403) {
-    throw new Error('YouTube menolak akses server (rate limit). Ini masalah dari sisi YouTube, bukan video Anda. Solusi: buka video di YouTube → klik "...Selengkapnya" di bawah judul → "Tampilkan transcript" → copy teksnya → paste di tab "TikTok/Teks".');
+    const directText = await tryDirectTimedText(videoId);
+    if (directText) return directText;
+    throw new Error('YouTube menolak akses server. Solusi cepat: buka video di YouTube → klik deskripsi/“...Selengkapnya” → “Tampilkan transcript” → copy teksnya → paste di tab “TikTok/Teks”.');
   }
 
   const html = await pageResp.text();
-  const match = html.match(/"captionTracks":(\[.*?\])/);
-  if (!match) {
-    throw new Error('Gagal membaca caption video (kemungkinan diblokir YouTube, bukan berarti video tidak punya transcript). Solusi: buka video di YouTube → klik "...Selengkapnya" di bawah judul → "Tampilkan transcript" → copy teksnya → paste di tab "TikTok/Teks".');
+  const tracks = getCaptionTracksFromHtml(html);
+
+  if (tracks.length) {
+    const preferred =
+      tracks.find(t => t.languageCode === 'id') ||
+      tracks.find(t => String(t.languageCode || '').startsWith('id')) ||
+      tracks.find(t => t.languageCode === 'en') ||
+      tracks.find(t => String(t.kind || '').toLowerCase() === 'asr') ||
+      tracks[0];
+
+    const text = await readCaptionTrack(preferred.baseUrl.replace(/\\u0026/g, '&'));
+    if (text && text.length > 30) return text;
   }
 
-  let tracks;
-  try {
-    const jsonStr = match[1].replace(/\\u0026/g, '&');
-    tracks = JSON.parse(jsonStr);
-  } catch (e) {
-    throw new Error('Gagal membaca daftar caption video.');
-  }
-  if (!tracks.length) throw new Error('Tidak ada caption tersedia untuk video ini.');
+  const directText = await tryDirectTimedText(videoId);
+  if (directText) return directText;
 
-  const preferred = tracks.find(t => t.languageCode === 'id') || tracks.find(t => t.languageCode === 'en') || tracks[0];
-  const captionResp = await fetch(preferred.baseUrl + '&fmt=json3');
-  const captionData = await captionResp.json();
-
-  const text = (captionData.events || [])
-    .flatMap(e => (e.segs || []).map(s => s.utf8))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (!text) throw new Error('Transcript kosong.');
-  return text;
+  throw new Error('Transcript/caption tidak berhasil dibaca otomatis. Ini sering terjadi karena YouTube memblokir server Vercel atau video tidak menyediakan transcript publik. Solusi: buka video di YouTube → “Tampilkan transcript” → copy teksnya → paste di tab “TikTok/Teks”.');
 }
 
 export default async function handler(req, res) {
