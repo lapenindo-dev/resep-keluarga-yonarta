@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.2.1
+   Resep Keluarga Yonarta v2.2.7
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
@@ -12,11 +12,22 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.1.9: posisi Bantu Isi Resep dipindah di bawah Foto Resep / Tambahan.
 // v2.2.0: Foto Masakan dibuat responsive agar selalu rapi mengikuti lebar device.
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
+// v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
+// v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
+// v2.2.7: Tombol back device/browser diarahkan ke navigasi internal aplikasi dulu.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
 let currentUser = null;
 
+let detailPhotoUrls = [];
+let photoViewerOpen = false;
+let photoViewerPushed = false;
+let viewerScale = 1;
+let viewerTx = 0;
+let viewerTy = 0;
+let viewerPointers = new Map();
+let viewerLastPinch = null;
 
 let recipes = [];
 let masterIngredients = [];
@@ -47,6 +58,29 @@ const escapeHtml = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<
 const safeExternalUrl = (url='') => { try { const u = new URL(String(url), window.location.origin); return ['http:', 'https:'].includes(u.protocol) ? u.href : ''; } catch(e){ return ''; } };
 const encArg = (v='') => encodeURIComponent(String(v));
 const displayIngredient = (it) => `${it.nama_bahan || ''}${it.jumlah ? ' - ' + it.jumlah : ''}${it.satuan ? ' ' + it.satuan : ''}`.trim();
+const formatDateTimeID = (value) => {
+  if(!value) return '-';
+  const d = new Date(value);
+  if(Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+};
+function currentUserName(){
+  const meta = currentUser?.user_metadata || {};
+  const name = meta.full_name || meta.name || meta.display_name;
+  if(name) return String(name);
+  const email = currentUser?.email || '';
+  return email ? email.split('@')[0] : '';
+}
+function recipeAuthorName(r){
+  return r.penulis_nama || r.penulis_email || '-';
+}
+function recipeAuditHtml(r){
+  return `<div class="recipe-audit">
+    <span>✍️ ${escapeHtml(recipeAuthorName(r))}</span>
+    <span>🕒 ${formatDateTimeID(r.created_at)}</span>
+    <span>✏️ Last edit: ${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}</span>
+  </div>`;
+}
 
 /* ---------- Auth helpers ---------- */
 
@@ -251,7 +285,7 @@ function renderExtraPhotosPreview(){
   if(!el) return;
   el.innerHTML = extraPhotosState.map((url, i) => `
     <div class="extra-thumb">
-      <img src="${url}" alt="Foto resep/tambahan ${i+1}" />
+      <img src="${url}" alt="Foto tambahan ${i+1}" />
       <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
     </div>`).join('');
 }
@@ -264,15 +298,62 @@ window.removeExtraPhoto = (i) => {
 /* ---------- Navigation ---------- */
 
 let navHistory = ['home'];
+let currentPage = 'home';
+let browserBackReady = false;
+
+function pushAppBrowserState(page, replace=false){
+  if(!window.history || !window.history.pushState) return;
+  const cleanPath = window.location.pathname + window.location.search;
+  const url = cleanPath + '#' + page;
+  try{
+    const state = { resepApp: true, page };
+    if(replace) window.history.replaceState(state, '', url);
+    else window.history.pushState(state, '', url);
+  } catch(e){ console.warn('History state gagal:', e); }
+}
+
+function initBrowserBackGuard(){
+  if(browserBackReady || !window.history || !window.history.pushState) return;
+  browserBackReady = true;
+  pushAppBrowserState('home', true);
+  pushAppBrowserState('home', false);
+  window.addEventListener('popstate', (event) => {
+    if(photoViewerOpen){
+      closePhotoViewer({ skipBrowser: true });
+      return;
+    }
+    const state = event.state;
+    if(state && state.resepApp){
+      const page = state.page || 'home';
+      navHistory = page === 'home' ? ['home'] : ['home', page];
+      go(page, { skipHistory: true, skipBrowser: true, keepAiPanel: true });
+      return;
+    }
+    navHistory = ['home'];
+    go('home', { skipHistory: true, skipBrowser: true, keepAiPanel: true });
+    pushAppBrowserState('home', false);
+  });
+}
 
 function go(page, opts={}){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const el = $(page);
   if(el) el.classList.add('active');
+  currentPage = page;
   document.querySelectorAll('[data-go]').forEach(b=>b.classList.toggle('active', b.dataset.go===page));
   if(page === 'add' && !opts.keepAiPanel) clearAiPanel();
+  if(page === 'add'){
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 0);
+  }
   if(!opts.skipHistory && navHistory[navHistory.length-1] !== page){
     navHistory.push(page);
+  }
+  if(!opts.skipBrowser && browserBackReady){
+    pushAppBrowserState(page, false);
   }
   updateBackButton();
 }
@@ -281,9 +362,11 @@ function goBack(){
   if(navHistory.length > 1){
     navHistory.pop();
     const prev = navHistory[navHistory.length-1];
-    go(prev, { skipHistory: true });
+    go(prev, { skipHistory: true, skipBrowser: true });
+    pushAppBrowserState(prev, true);
   } else {
-    go('home', { skipHistory: true });
+    go('home', { skipHistory: true, skipBrowser: true });
+    pushAppBrowserState('home', true);
   }
 }
 
@@ -353,6 +436,7 @@ function recipeCard(r){
     <div class="recipe-info">
       <h3>${escapeHtml(r.nama_resep)}</h3>
       <p class="recipe-meta">${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')}${r.durasi_menit ? ' · ' + escapeHtml(r.durasi_menit) + ' menit' : ''}</p>
+      ${recipeAuditHtml(r)}
       ${r.dimasak_oleh ? `<p class="cook-by">👤 Dimasak oleh ${escapeHtml(r.dimasak_oleh)}</p>` : ''}
       <div class="stars">${stars(r.rating_keluarga)}</div>
       ${collectionPillsHtml(r.id)}
@@ -401,6 +485,152 @@ window.shareRecipe = async (id) => {
   }
 };
 
+/* ---------- Photo viewer / zoom ---------- */
+
+function applyViewerTransform(){
+  const img = $('photoViewerImg');
+  if(!img) return;
+  img.style.transform = `translate3d(${viewerTx}px, ${viewerTy}px, 0) scale(${viewerScale})`;
+}
+
+function resetPhotoViewerZoom(){
+  viewerScale = 1;
+  viewerTx = 0;
+  viewerTy = 0;
+  viewerLastPinch = null;
+  applyViewerTransform();
+}
+
+window.zoomPhotoViewer = (delta) => {
+  viewerScale = Math.max(1, Math.min(4, viewerScale + delta));
+  if(viewerScale === 1){ viewerTx = 0; viewerTy = 0; }
+  applyViewerTransform();
+};
+
+window.resetPhotoViewer = () => resetPhotoViewerZoom();
+
+function openPhotoViewerBySrc(src){
+  if(!src) return;
+  const viewer = $('photoViewer');
+  const img = $('photoViewerImg');
+  if(!viewer || !img) return;
+  img.src = src;
+  resetPhotoViewerZoom();
+  viewer.classList.add('active');
+  viewer.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('viewer-open');
+  photoViewerOpen = true;
+  viewerPointers.clear();
+  if(window.history && window.history.pushState && !photoViewerPushed){
+    try{
+      window.history.pushState({ resepApp: true, photoViewer: true, page: currentPage }, '', window.location.pathname + window.location.search + '#' + currentPage + '-foto');
+      photoViewerPushed = true;
+    } catch(e){ photoViewerPushed = false; }
+  }
+}
+window.openPhotoViewerBySrc = openPhotoViewerBySrc;
+
+window.openPhotoViewer = (index=0) => {
+  const url = detailPhotoUrls[index] || detailPhotoUrls[0];
+  openPhotoViewerBySrc(url);
+};
+
+window.closePhotoViewer = (opts={}) => {
+  const viewer = $('photoViewer');
+  const img = $('photoViewerImg');
+  if(viewer){
+    viewer.classList.remove('active');
+    viewer.setAttribute('aria-hidden', 'true');
+  }
+  if(img) img.removeAttribute('src');
+  document.body.classList.remove('viewer-open');
+  photoViewerOpen = false;
+  resetPhotoViewerZoom();
+  viewerPointers.clear();
+  const shouldStepBack = photoViewerPushed && !opts.skipBrowser;
+  photoViewerPushed = false;
+  if(shouldStepBack && window.history){
+    try { window.history.back(); } catch(e){}
+  }
+};
+
+window.selectDetailPhoto = (index=0) => {
+  const url = detailPhotoUrls[index];
+  const main = $('detailMainPhoto');
+  if(main && url) main.src = url;
+  document.querySelectorAll('.photo-thumbs .thumb').forEach((t, i)=>t.classList.toggle('active', i===index));
+};
+
+function setupPhotoViewerEvents(){
+  const viewer = $('photoViewer');
+  const img = $('photoViewerImg');
+  if(!viewer || !img) return;
+
+  viewer.addEventListener('click', (e) => {
+    if(e.target === viewer) closePhotoViewer();
+  });
+
+  img.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    if(viewerScale > 1) resetPhotoViewerZoom();
+    else { viewerScale = 2; applyViewerTransform(); }
+  });
+
+  img.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const step = e.deltaY < 0 ? 0.18 : -0.18;
+    window.zoomPhotoViewer(step);
+  }, { passive: false });
+
+  img.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    img.setPointerCapture?.(e.pointerId);
+    viewerPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  });
+
+  img.addEventListener('pointermove', (e) => {
+    if(!viewerPointers.has(e.pointerId)) return;
+    e.preventDefault();
+    const prev = viewerPointers.get(e.pointerId);
+    viewerPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    const points = [...viewerPointers.values()];
+    if(points.length >= 2){
+      const [a,b] = points;
+      const dist = Math.hypot(a.x-b.x, a.y-b.y);
+      if(viewerLastPinch){
+        const ratio = dist / viewerLastPinch;
+        viewerScale = Math.max(1, Math.min(4, viewerScale * ratio));
+        if(viewerScale === 1){ viewerTx = 0; viewerTy = 0; }
+        applyViewerTransform();
+      }
+      viewerLastPinch = dist;
+      return;
+    }
+
+    if(viewerScale > 1){
+      viewerTx += e.clientX - prev.x;
+      viewerTy += e.clientY - prev.y;
+      applyViewerTransform();
+    }
+  });
+
+  const clearPointer = (e) => {
+    viewerPointers.delete(e.pointerId);
+    if(viewerPointers.size < 2) viewerLastPinch = null;
+  };
+  img.addEventListener('pointerup', clearPointer);
+  img.addEventListener('pointercancel', clearPointer);
+  img.addEventListener('pointerleave', clearPointer);
+
+  document.addEventListener('keydown', (e) => {
+    if(!photoViewerOpen) return;
+    if(e.key === 'Escape') closePhotoViewer();
+    if(e.key === '+') window.zoomPhotoViewer(0.2);
+    if(e.key === '-') window.zoomPhotoViewer(-0.2);
+  });
+}
+
 /* ---------- Recipe detail ---------- */
 
 window.viewRecipe = (id) => {
@@ -410,14 +640,16 @@ window.viewRecipe = (id) => {
   try { localStorage.setItem('recipeHistory', JSON.stringify(recipeHistory)); } catch(e){}
 
   const allPhotos = [r.foto_url, ...(Array.isArray(r.foto_urls) ? r.foto_urls : [])].filter(Boolean);
+  detailPhotoUrls = allPhotos;
   let photoBlock = '';
   if(allPhotos.length){
-    photoBlock = `<div class="detail-photo-wrap">
-      <img id="detailMainPhoto" src="${allPhotos[0]}" alt="Foto ${escapeHtml(r.nama_resep)}" />
+    photoBlock = `<div class="detail-photo-wrap zoomable-photo" title="Ketuk untuk zoom foto">
+      <img id="detailMainPhoto" src="${allPhotos[0]}" alt="Foto ${escapeHtml(r.nama_resep)}" onclick="openPhotoViewerBySrc(this.src)" />
       <button class="detail-share-btn" onclick='shareRecipe("${r.id}")' title="Bagikan resep">📤</button>
+      <span class="zoom-hint">🔍 Ketuk foto untuk zoom</span>
     </div>`;
     if(allPhotos.length > 1){
-      photoBlock += `<div class="photo-thumbs">${allPhotos.map((url,i)=>`<img src="${url}" class="thumb${i===0?' active':''}" onclick="document.getElementById('detailMainPhoto').src='${url}';this.parentElement.querySelectorAll('.thumb').forEach(t=>t.classList.remove('active'));this.classList.add('active')" />`).join('')}</div>`;
+      photoBlock += `<div class="photo-thumbs">${allPhotos.map((url,i)=>`<img src="${url}" class="thumb${i===0?' active':''}" onclick="selectDetailPhoto(${i})" ondblclick="openPhotoViewer(${i})" title="Ketuk untuk pilih, tap 2x untuk zoom" />`).join('')}</div>`;
     }
   } else {
     photoBlock = `<div class="actions" style="margin-top:0"><button class="secondary wide" onclick='shareRecipe("${r.id}")'>📤 Bagikan Resep</button></div>`;
@@ -453,6 +685,9 @@ window.viewRecipe = (id) => {
         <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
         <div><b>Dimasak Oleh</b><span>${escapeHtml(r.dimasak_oleh || '-')}</span></div>
         <div><b>Sumber</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
+        <div><b>Penulis</b><span>${escapeHtml(recipeAuthorName(r))}</span></div>
+        <div><b>Tanggal Dibuat</b><span>${formatDateTimeID(r.created_at)}</span></div>
+        <div><b>Last Edit</b><span>${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}</span></div>
         <div><b>Link</b><span>${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
       </div>
       <h3>🧂 Bahan</h3>
@@ -465,7 +700,7 @@ window.viewRecipe = (id) => {
       <p class="note-box">${escapeHtml(r.catatan_yonarta || 'Belum ada catatan.')}</p>
       <div class="actions detail-actions">
         <button class="secondary" onclick='printRecipe("${r.id}")'>🖨️ Print / PDF</button>
-        <button class="secondary" onclick='editRecipe("${r.id}")'>Edit Resep</button>
+        <button class="primary edit-mode-btn" onclick='editRecipe("${r.id}")'>✏️ Masuk Mode Edit</button>
         <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus Resep</button>
       </div>
     </div>`;
@@ -574,6 +809,9 @@ async function handleRecipeSubmit(e){
   }
 
   const existing = id ? recipes.find(r=>r.id===id) : null;
+  const editorName = currentUserName();
+  const editorEmail = currentUser?.email || '';
+  const nowIso = new Date().toISOString();
   const payload = {
     nama_resep: $('nama_resep').value.trim(),
     bahan_utama: $('bahan_utama').value.trim(),
@@ -590,7 +828,12 @@ async function handleRecipeSubmit(e){
     foto_url: uploadedPhotoUrl || existing?.foto_url || null,
     foto_urls: extraPhotosState,
     dimasak_oleh: $('dimasak_oleh').value.trim(),
-    sumber_resep: $('sumber_resep') ? $('sumber_resep').value : 'Manual'
+    sumber_resep: $('sumber_resep') ? $('sumber_resep').value : 'Manual',
+    penulis_nama: $('penulis_nama') ? $('penulis_nama').value.trim() : (existing?.penulis_nama || ''),
+    penulis_email: existing?.penulis_email || '',
+    last_edit_at: nowIso,
+    last_edit_by_name: editorName,
+    last_edit_by_email: editorEmail
   };
   const res = id ? await db.from('recipes').update(payload).eq('id', id) : await db.from('recipes').insert(payload);
   if(res.error) return alert('Gagal simpan: ' + res.error.message);
@@ -599,8 +842,10 @@ async function handleRecipeSubmit(e){
 
 window.editRecipe = (id)=>{
   const r = recipes.find(x=>x.id===id); if(!r) return;
-  $('formTitle').textContent='Edit Resep'; $('recipeId').value=r.id;
-  ['nama_resep','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','sumber_resep','dimasak_oleh'].forEach(k=>$(k).value=r[k]||'');
+  $('formTitle').textContent='✏️ Edit Resep'; $('recipeId').value=r.id;
+  const banner = $('formModeBanner');
+  if(banner){ banner.className='page-mode-banner edit-mode'; banner.innerHTML='<span>✏️ Mode Edit Resep</span><small>Anda sedang mengubah resep lama. Jangan lupa tekan Simpan.</small>'; }
+  ['nama_resep','penulis_nama','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','sumber_resep','dimasak_oleh'].forEach(k=>{ if($(k)) $(k).value=r[k]||''; });
   $('durasi_menit').value=r.durasi_menit||''; $('porsi').value=r.porsi||''; $('rating_keluarga').value=r.rating_keluarga||0;
   ingredientGroupsState = normalizeIngredientGroups(r.bahan);
   renderIngredientGroups();
@@ -627,7 +872,10 @@ window.deleteRecipe = async (id)=>{
 function resetForm(){
   $('recipeForm').reset();
   $('recipeId').value='';
-  $('formTitle').textContent='Tambah Resep';
+  $('formTitle').textContent='➕ Tambah Resep';
+  const banner = $('formModeBanner');
+  if(banner){ banner.className='page-mode-banner add-mode'; banner.innerHTML='<span>➕ Mode Tambah Resep</span><small>Isi data resep baru lalu tekan Simpan.</small>'; }
+  if($('penulis_nama')) $('penulis_nama').value='';
   $('rating_keluarga').value=0;
   setPhotoPreview(null);
   extraPhotosState = [];
@@ -1147,12 +1395,12 @@ function applyExtractedRecipe(recipe, sourceLabel){
 
 async function handleAiExtractPhoto(){
   const files = Array.from($('aiPhotoInput').files || []);
-  if(!files.length) return setAiStatus('Pilih minimal 1 foto resep dulu.', 'error');
+  if(!files.length) return setAiStatus('Pilih minimal 1 foto dulu.', 'error');
   setAiStatus(`⏳ Mengompres ${files.length} foto...`, 'loading');
   try {
     const images = await Promise.all(files.map(f => compressImageFile(f)));
     const totalKB = images.reduce((sum, img) => sum + estimateBase64SizeKB(img), 0);
-    setAiStatus(`⏳ Membaca ${files.length} foto resep (~${totalKB} KB) dengan AI...`, 'loading');
+    setAiStatus(`⏳ Membaca ${files.length} foto (~${totalKB} KB) dengan AI...`, 'loading');
     const recipe = await callExtractRecipeApi({ mode: 'photo', imagesBase64: images });
     applyExtractedRecipe(recipe, 'AI');
   } catch(err){
@@ -1373,7 +1621,7 @@ function renderGallery(){
   const withPhotos = recipes.filter(r=>r.foto_url);
   el.innerHTML = withPhotos.length
     ? withPhotos.map(r=>`<div class="gallery-card clickable-card" onclick='viewRecipe("${r.id}")'><img src="${r.foto_url}" alt="${escapeHtml(r.nama_resep)}" loading="lazy"><span>${escapeHtml(r.nama_resep)}</span></div>`).join('')
-    : '<p class="muted">Belum ada foto masakan.</p>';
+    : '<p class="muted">Belum ada foto utama.</p>';
 }
 
 function renderHistory(){
@@ -1490,7 +1738,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga Yonarta',
-    version: '2.2.1',
+    version: '2.2.2',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1527,7 +1775,12 @@ async function insertRecipesFromBackup(items){
       foto_url: r.foto_url || null,
       foto_urls: Array.isArray(r.foto_urls) ? r.foto_urls : [],
       dimasak_oleh: r.dimasak_oleh || '',
-      sumber_resep: r.sumber_resep || 'Manual'
+      sumber_resep: r.sumber_resep || 'Manual',
+      penulis_nama: r.penulis_nama || '',
+      penulis_email: r.penulis_email || '',
+      last_edit_at: r.last_edit_at || r.updated_at || r.created_at || new Date().toISOString(),
+      last_edit_by_name: r.last_edit_by_name || '',
+      last_edit_by_email: r.last_edit_by_email || ''
     };
     const duplicate = recipes.find(x => (x.nama_resep||'').toLowerCase() === payload.nama_resep.toLowerCase());
     if(duplicate){ if(r.id) idMap[String(r.id)] = String(duplicate.id); skipped++; continue; }
@@ -1577,11 +1830,11 @@ function buildPrintableRecipeHtml(r){
   <button onclick="window.print()">Print / Save PDF</button>
   <h1>${escapeHtml(r.nama_resep)}</h1>
   <div class="meta">${escapeHtml(r.bahan_utama||'-')} · ${escapeHtml(r.jenis_hidangan||'-')} · ${r.durasi_menit?escapeHtml(r.durasi_menit+' menit'):'-'} · ${r.porsi?escapeHtml(r.porsi+' porsi'):'-'}</div>
-  <div class="box"><b>Rating:</b> ${stars(r.rating_keluarga)}<br><b>Sumber:</b> ${escapeHtml(r.sumber_resep||'Manual')}<br><b>Dimasak oleh:</b> ${escapeHtml(r.dimasak_oleh||'-')}<br><b>Koleksi:</b> ${escapeHtml(collectionNamesForRecipe(r.id).join(', ')||'-')}</div>
+  <div class="box"><b>Rating:</b> ${stars(r.rating_keluarga)}<br><b>Sumber:</b> ${escapeHtml(r.sumber_resep||'Manual')}<br><b>Dimasak oleh:</b> ${escapeHtml(r.dimasak_oleh||'-')}<br><b>Penulis:</b> ${escapeHtml(recipeAuthorName(r))}<br><b>Tanggal dibuat:</b> ${formatDateTimeID(r.created_at)}<br><b>Last edit:</b> ${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}<br><b>Koleksi:</b> ${escapeHtml(collectionNamesForRecipe(r.id).join(', ')||'-')}</div>
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Catatan</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.2.1</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.2.7</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -1598,6 +1851,7 @@ window.printRecipe = (id) => {
 /* ========== INIT — all event handlers ========== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  initBrowserBackGuard();
   if($('loginPasswordBtn')) $('loginPasswordBtn').addEventListener('click', loginWithPassword);
   if($('loginBtn')) $('loginBtn').addEventListener('click', sendLoginEmail);
   if($('loginEmail')) $('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loginWithPassword(); });
@@ -1607,7 +1861,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if($('shareAppHomeBtn')) $('shareAppHomeBtn').addEventListener('click', shareApp);
 
   // Navigation
-  document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+  document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.go === 'add'){ resetForm(); }
+    go(b.dataset.go);
+  }));
 
   // Refresh button — with visual feedback
   $('refreshBtn').addEventListener('click', async () => {
@@ -1646,7 +1903,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingHtml = files.map(f => `<div class="extra-thumb pending"><img src="${URL.createObjectURL(f)}" alt="Baru" /><span class="pending-badge">Baru</span></div>`).join('');
     el.innerHTML = extraPhotosState.map((url, i) => `
       <div class="extra-thumb">
-        <img src="${url}" alt="Foto resep/tambahan ${i+1}" />
+        <img src="${url}" alt="Foto tambahan ${i+1}" />
         <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
       </div>`).join('') + pendingHtml;
   });
@@ -1745,9 +2002,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $('aiExtractTextBtn').addEventListener('click', handleAiExtractText);
   $('aiPhotoInput').addEventListener('change', () => {
     const files = Array.from($('aiPhotoInput').files || []);
-    $('aiPhotoPreview').innerHTML = files.map(f => `<div class="extra-thumb"><img src="${URL.createObjectURL(f)}" alt="Foto AI" /></div>`).join('');
-    setAiStatus(files.length ? `${files.length} foto resep siap diekstrak.` : null, 'loading');
+    $('aiPhotoPreview').innerHTML = files.map(f => `<div class="extra-thumb"><img src="${URL.createObjectURL(f)}" alt="Foto input" /></div>`).join('');
+    setAiStatus(files.length ? `${files.length} foto siap diekstrak.` : null, 'loading');
   });
+
+  // Photo viewer zoom
+  setupPhotoViewerEvents();
 
   // Default collections
   ensureDefaultCollections();
@@ -1761,5 +2021,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.2.1 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.2.7 loaded');
 });

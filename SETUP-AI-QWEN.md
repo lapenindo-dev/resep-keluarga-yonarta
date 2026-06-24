@@ -1,4 +1,4 @@
-# Setup Fitur AI Qwen — v2.2.1
+# Setup Fitur AI Qwen — v2.2.7
 
 ## 1. Daftar & Dapatkan API Key Qwen
 1. Buka https://www.alibabacloud.com/help/en/model-studio/get-api-key
@@ -51,7 +51,7 @@ di bawah $1/bulan. Cek dashboard Alibaba Cloud Model Studio untuk monitor pemaka
 - **Error 401/403 dari Qwen** → API key salah atau belum aktif, cek di Alibaba Cloud Console
 
 
-## v2.2.1 — AI Menu Generator
+## v2.2.7 — AI Menu Generator
 
 Endpoint baru:
 
@@ -72,7 +72,7 @@ DASHSCOPE_API_KEY=isi_api_key_dashscope_anda
 ```
 
 
-## Catatan Teks/Caption v2.2.1
+## Catatan Teks/Caption v2.2.7
 
 Fitur ambil transcript YouTube otomatis sudah dihapus karena tidak stabil di Vercel/server hosting.
 
@@ -87,7 +87,7 @@ Cara input resep dari video:
 Tidak ada dependency tambahan untuk YouTube di `package.json`.
 
 
-## Login Email / Proteksi Akses v2.2.1
+## Login Email / Proteksi Akses v2.2.7
 
 Versi ini memakai Supabase Auth email magic link. Setelah upload versi ini:
 
@@ -97,14 +97,14 @@ Versi ini memakai Supabase Auth email magic link. Setelah upload versi ini:
 4. Jalankan file SQL `supabase-migration-v2.1.1-auth-rls.sql` di Supabase SQL Editor.
 5. Pastikan semua email keluarga yang boleh masuk sudah diundang/dibuat di Supabase Auth.
 
-Catatan: policy SQL v2.2.1 membuat hanya user yang sudah login yang bisa baca/tambah/edit/hapus data. Semua user login keluarga berbagi data resep yang sama.
+Catatan: policy SQL v2.2.7 membuat hanya user yang sudah login yang bisa baca/tambah/edit/hapus data. Semua user login keluarga berbagi data resep yang sama.
 
 ## Share Aplikasi
 
 Tombol share tersedia di header dan beranda. Tombol ini membagikan link aplikasi ke WhatsApp/Telegram/dll, atau menyalin link bila browser tidak mendukung native share.
 
 
-## Login keluarga v2.2.1
+## Login keluarga v2.2.7
 
 Jika muncul error `Signups not allowed for otp`, itu bukan error Qwen. Artinya Supabase menolak Magic Link karena email belum dibuat atau signup/OTP dibatasi.
 
@@ -123,7 +123,7 @@ Magic Link tetap tersedia, tetapi hanya disarankan untuk email yang sudah terdaf
 
 ---
 
-## v2.2.1 - Backup JSON disembunyikan dari user keluarga
+## v2.2.7 - Backup JSON disembunyikan dari user keluarga
 
 Backup / Import JSON tidak wajib untuk pemakaian harian karena data utama tersimpan di Supabase.
 
@@ -151,15 +151,48 @@ const ADMIN_EMAILS = ['admin@email.com'];
 Untuk istri/keluarga, biarkan `ADMIN_EMAILS = []` agar tidak ada tombol backup/import yang membingungkan atau berisiko salah restore.
 
 
-## Update v2.2.1
+## Update v2.2.7
 
 - Field **Foto Resep** diubah menjadi **Foto Masakan** untuk hero image/kartu resep.
 - Field **Foto Tambahan** diubah menjadi **Foto Resep / Tambahan** untuk catatan resep, screenshot, bahan, proses masak, atau foto tambahan.
 - YouTube otomatis tetap tidak dipakai. Transcript/caption tetap lewat input teks manual.
 
 
-## Update v2.2.1
+## Update v2.2.7
 
 - Foto Resep / Tambahan pada halaman tambah/edit resep dibuat sebagai grid responsive.
 - Thumbnail foto tambahan mengikuti lebar device dan tetap rapi walaupun ukuran asli foto berbeda-beda.
 - Tidak perlu SQL migration baru.
+
+
+## Update v2.2.7 - Penulis dan Last Edit
+
+Jalankan SQL baru berikut di Supabase SQL Editor:
+
+`supabase-migration-v2.2.7-author-timestamps.sql`
+
+Kolom baru yang ditambahkan:
+- `penulis_nama`
+- `penulis_email`
+- `last_edit_at`
+- `last_edit_by_name`
+- `last_edit_by_email`
+
+Aplikasi otomatis mengisi penulis dari user yang sedang login.
+
+
+## Update v2.2.7
+
+- Nama penulis resep diisi manual di form resep.
+- Tanggal dibuat dan last edit tetap otomatis dari sistem.
+- Halaman tambah/edit resep otomatis mulai dari bagian paling atas.
+- Tombol Simpan ditambahkan di bagian atas dan tetap ada di bawah.
+- Tidak perlu SQL migration baru jika migration v2.2.2 sudah dijalankan.
+
+
+## Update v2.2.7
+- Label Foto Masakan diubah menjadi **Foto Utama**.
+- Label Foto Resep / Tambahan diubah menjadi **Foto Tambahan**.
+- Panel Bantu Isi Resep diubah menjadi **Input Resep**.
+- Input Resep disederhanakan menjadi 2 cara: **Input Manual** dan **Foto / Caption**.
+- Foto Utama diberi border putih halus, outline tipis, radius, dan shadow agar tidak terlalu mepet ke lebar device.

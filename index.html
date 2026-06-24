@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.2.1</title>
+  <title>Resep Keluarga Yonarta v2.2.7</title>
   <meta name="theme-color" content="#f59e0b" />
   <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -114,60 +114,72 @@
     </section>
 
     <section id="add" class="page">
+      <div id="formModeBanner" class="page-mode-banner add-mode"><span>➕ Mode Tambah Resep</span><small>Isi data resep baru lalu tekan Simpan.</small></div>
       <h2 id="formTitle">Tambah Resep</h2>
 
       <form id="recipeForm">
         <input type="hidden" id="recipeId" />
-        <label class="hero-photo-field">Foto Masakan <small class="hint">Foto utama/hero image untuk kartu resep. Opsional.</small>
+        <div class="form-top-actions">
+          <button class="primary wide top-save-btn" type="submit">💾 Simpan Resep</button>
+          <small class="hint">Tombol simpan juga tersedia di bagian bawah form.</small>
+        </div>
+        <label class="hero-photo-field">Foto Utama <small class="hint">Foto utama untuk kartu resep dan halaman detail. Opsional.</small>
           <input id="foto_file" type="file" accept="image/*" />
           <img id="foto_preview" class="photo-preview" alt="Preview" style="display:none" />
         </label>
-        <label class="extra-photo-field">Foto Resep / Tambahan <small class="hint">Boleh pilih beberapa foto sekaligus: catatan resep, screenshot, bahan, proses masak, atau foto tambahan.</small>
+        <label class="extra-photo-field">Foto Tambahan <small class="hint">Boleh pilih beberapa foto sekaligus: catatan resep, screenshot, bahan, proses masak, atau foto pendukung.</small>
           <input id="foto_files_extra" type="file" accept="image/*" multiple />
           <div id="extraPhotosPreview" class="extra-photos-preview responsive-extra-grid"></div>
         </label>
       <div class="ai-extract-box">
         <div class="section-title-row">
-          <h3>✨ Bantu Isi Resep</h3>
+          <h3>✨ Input Resep</h3>
         </div>
-        <div class="ai-tabs">
-          <button class="ai-tab active" data-aitab="manual" type="button">✍️ Manual</button>
-          <button class="ai-tab" data-aitab="photo" type="button">📷 Foto Resep</button>
-          <button class="ai-tab" data-aitab="text" type="button">📝 Teks / Caption</button>
+        <div class="ai-tabs input-recipe-tabs">
+          <button class="ai-tab active" data-aitab="manual" type="button">✍️ Input Manual</button>
+          <button class="ai-tab" data-aitab="photo-caption" type="button">📷 Foto / Caption</button>
         </div>
 
         <div class="ai-panel active" data-aipanel="manual">
-          <p class="hint">Isi form resep secara manual. Pilih sumber resep di bagian bawah form: Manual, YouTube, atau AI.</p>
+          <p class="hint">Isi form resep secara manual. Gunakan cara ini kalau resep sudah diketahui dan ingin diketik sendiri.</p>
           <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">✍️ Mulai Isi Manual</button>
         </div>
 
-        <div class="ai-panel" data-aipanel="photo">
-          <p class="hint">Upload foto resep/catatan/screenshot dari buku, video, atau caption. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
-          <input id="aiPhotoInput" type="file" accept="image/*" multiple />
-          <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
-          <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Ekstrak dari Foto Resep</button>
-        </div>
+        <div class="ai-panel" data-aipanel="photo-caption">
+          <p class="hint">Gunakan foto catatan/screenshot resep atau paste caption/transcript manual. Sistem tidak mengambil YouTube otomatis.</p>
 
+          <div class="input-method-card">
+            <h4>📷 Dari Foto</h4>
+            <p class="hint">Upload foto resep, catatan, screenshot, atau foto bahan. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
+            <input id="aiPhotoInput" type="file" accept="image/*" multiple />
+            <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
+            <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Ekstrak dari Foto</button>
+          </div>
 
-        <div class="ai-panel" data-aipanel="text">
-          <p class="hint">Paste teks resep, caption TikTok/Instagram, transcript YouTube yang dicopy manual, atau catatan resep keluarga. Sistem tidak mengambil YouTube otomatis.</p>
-          <label class="mini-label">Simpan sebagai sumber
-            <select id="aiTextSource">
-              <option value="AI">AI</option>
-              <option value="YouTube">YouTube</option>
-              <option value="Manual">Manual</option>
-            </select>
-          </label>
-          <textarea id="aiTextInput" placeholder="Contoh:
+          <div class="input-method-card">
+            <h4>📝 Dari Caption / Teks</h4>
+            <p class="hint">Paste caption TikTok/Instagram, transcript YouTube yang dicopy manual, atau catatan resep keluarga.</p>
+            <label class="mini-label">Simpan sebagai sumber
+              <select id="aiTextSource">
+                <option value="AI">AI</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Manual">Manual</option>
+              </select>
+            </label>
+            <textarea id="aiTextInput" placeholder="Contoh:
 Bahan: 500gr ayam, 3 siung bawang putih, 2 sdm kecap.
 Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
-          <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan dengan AI</button>
+            <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan dari Caption / Teks</button>
+          </div>
         </div>
 
         <div id="aiExtractStatus" class="ai-status" style="display:none"></div>
       </div>
 
         <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Samcan Crispy" /></label>
+        <label>Nama Penulis Resep <small class="hint">Diisi manual, contoh: Mama, Papa, Oma.</small>
+          <input id="penulis_nama" placeholder="Contoh: Mama" />
+        </label>
         <label>Bahan Utama
           <select id="bahan_utama">
             <option value="">Pilih bahan utama</option>
@@ -224,8 +236,9 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
       </form>
     </section>
 
-    <section id="detail" class="page">
+    <section id="detail" class="page detail-view-page">
       <button class="ghost" type="button" id="backToRecipes">← Kembali</button>
+      <div class="page-mode-banner view-mode"><span>👀 Mode Lihat Resep</span><small>Halaman ini hanya untuk melihat. Tekan Edit Resep jika ingin mengubah.</small></div>
       <div id="recipeDetail" class="detail-box"></div>
     </section>
 
@@ -332,6 +345,21 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
     </section>
   </main>
 
+  <div id="photoViewer" class="photo-viewer" aria-hidden="true">
+    <div class="photo-viewer-top">
+      <button class="photo-viewer-btn" onclick="closePhotoViewer()" type="button">✕</button>
+      <div class="photo-viewer-tools">
+        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(-0.25)" type="button">−</button>
+        <button class="photo-viewer-btn" onclick="resetPhotoViewer()" type="button">Reset</button>
+        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(0.25)" type="button">＋</button>
+      </div>
+    </div>
+    <div class="photo-viewer-stage">
+      <img id="photoViewerImg" alt="Zoom foto resep" draggable="false" />
+    </div>
+    <p class="photo-viewer-hint">Cubit foto untuk zoom, geser untuk melihat detail.</p>
+  </div>
+
   <nav class="bottomnav">
     <button class="active" data-go="home">🏠<span>Beranda</span></button>
     <button data-go="recipes">📖<span>Resep</span></button>
@@ -344,7 +372,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=2.2.1"></script>
+  <script src="app.js?v=2.2.7"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
