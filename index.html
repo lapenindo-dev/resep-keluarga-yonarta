@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.1.7</title>
+  <title>Resep Keluarga Yonarta v2.2.1</title>
   <meta name="theme-color" content="#f59e0b" />
   <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -116,6 +116,16 @@
     <section id="add" class="page">
       <h2 id="formTitle">Tambah Resep</h2>
 
+      <form id="recipeForm">
+        <input type="hidden" id="recipeId" />
+        <label class="hero-photo-field">Foto Masakan <small class="hint">Foto utama/hero image untuk kartu resep. Opsional.</small>
+          <input id="foto_file" type="file" accept="image/*" />
+          <img id="foto_preview" class="photo-preview" alt="Preview" style="display:none" />
+        </label>
+        <label class="extra-photo-field">Foto Resep / Tambahan <small class="hint">Boleh pilih beberapa foto sekaligus: catatan resep, screenshot, bahan, proses masak, atau foto tambahan.</small>
+          <input id="foto_files_extra" type="file" accept="image/*" multiple />
+          <div id="extraPhotosPreview" class="extra-photos-preview responsive-extra-grid"></div>
+        </label>
       <div class="ai-extract-box">
         <div class="section-title-row">
           <h3>✨ Bantu Isi Resep</h3>
@@ -134,7 +144,7 @@
         <div class="ai-panel" data-aipanel="photo">
           <p class="hint">Upload foto resep/catatan/screenshot dari buku, video, atau caption. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
           <input id="aiPhotoInput" type="file" accept="image/*" multiple />
-          <div id="aiPhotoPreview" class="extra-photos-preview"></div>
+          <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
           <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Ekstrak dari Foto Resep</button>
         </div>
 
@@ -157,16 +167,6 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
         <div id="aiExtractStatus" class="ai-status" style="display:none"></div>
       </div>
 
-      <form id="recipeForm">
-        <input type="hidden" id="recipeId" />
-        <label class="hero-photo-field">Foto Masakan <small class="hint">Foto utama/hero image untuk kartu resep. Opsional.</small>
-          <input id="foto_file" type="file" accept="image/*" />
-          <img id="foto_preview" class="photo-preview" alt="Preview" style="display:none" />
-        </label>
-        <label>Foto Resep / Tambahan <small class="hint">Boleh pilih beberapa foto sekaligus: catatan resep, screenshot, bahan, proses masak, atau foto tambahan.</small>
-          <input id="foto_files_extra" type="file" accept="image/*" multiple />
-          <div id="extraPhotosPreview" class="extra-photos-preview"></div>
-        </label>
         <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Samcan Crispy" /></label>
         <label>Bahan Utama
           <select id="bahan_utama">
@@ -344,7 +344,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=2.1.7"></script>
+  <script src="app.js?v=2.2.1"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
