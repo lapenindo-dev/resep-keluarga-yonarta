@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.0.0
+   Resep Keluarga Yonarta v2.0.1
    AI Menu Generator fleksibel + Shopping List + Dashboard Statistik
    AI Extract (Qwen): Foto, YouTube Transcript, TikTok/Teks Manual
    ===================================================== */
@@ -25,7 +25,7 @@ try { mealPlan = JSON.parse(localStorage.getItem('mealPlanV200') || localStorage
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
 const MEAL_LABELS = ['Siang','Malam'];
-// v2.0.0: slot tetap Siang dan Malam; jadwal lama yang punya Pagi dipotong
+// v2.0.1: slot tetap Siang dan Malam; jadwal lama yang punya Pagi dipotong
 mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
 
 const $ = (id) => document.getElementById(id);
@@ -1368,5 +1368,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateBackButton();
   loadAll();
 
-  console.log('✅ Resep Keluarga Yonarta v2.0.0 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.0.1 loaded');
 });

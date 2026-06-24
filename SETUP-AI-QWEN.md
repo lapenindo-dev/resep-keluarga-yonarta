@@ -1,4 +1,4 @@
-# Setup Fitur AI Qwen — v2.0.0
+# Setup Fitur AI Qwen — v2.0.1
 
 ## 1. Daftar & Dapatkan API Key Qwen
 1. Buka https://www.alibabacloud.com/help/en/model-studio/get-api-key
@@ -51,7 +51,7 @@ di bawah $1/bulan. Cek dashboard Alibaba Cloud Model Studio untuk monitor pemaka
 - **Error 401/403 dari Qwen** → API key salah atau belum aktif, cek di Alibaba Cloud Console
 
 
-## v2.0.0 — AI Menu Generator
+## v2.0.1 — AI Menu Generator
 
 Endpoint baru:
 
