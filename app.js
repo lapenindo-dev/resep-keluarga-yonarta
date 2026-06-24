@@ -1,6 +1,6 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.1.2
-   Login Email/Password + Share Aplikasi + AI Menu Generator + Backup + Koleksi + Print/PDF
+   Resep Keluarga Yonarta v2.1.3
+   Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
 const SUPABASE_URL = 'https://eswokjdhyktikcxranpo.supabase.co';
@@ -9,6 +9,10 @@ let db;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
 catch(e){ console.error('Supabase init gagal:', e); }
 const PHOTO_BUCKET = 'recipe-photos';
+// v2.1.3: backup/import JSON disembunyikan dari user keluarga.
+// Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
+// Contoh: const ADMIN_EMAILS = ['nama@email.com'];
+const ADMIN_EMAILS = [];
 let currentUser = null;
 
 
@@ -30,7 +34,7 @@ const DEFAULT_COLLECTIONS = ['Menu Harian','Menu Anak','Natal','Imlek','BBQ','Fa
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
 const MEAL_LABELS = ['Siang','Malam'];
-// v2.1.2: login utama email/password; Magic Link tetap ada untuk email yang sudah terdaftar
+// v2.1.3: login utama email/password; Magic Link tetap ada untuk email yang sudah terdaftar
 mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
 
 const $ = (id) => document.getElementById(id);
@@ -51,6 +55,19 @@ function setAuthStatus(message, type='loading'){
   el.textContent = message;
 }
 
+function isAdminUser(){
+  const email = (currentUser?.email || '').toLowerCase();
+  return ADMIN_EMAILS.map(x => String(x).toLowerCase()).includes(email);
+}
+
+function updateAdminUI(){
+  const isAdmin = isAdminUser();
+  document.body.classList.toggle('is-admin', isAdmin);
+  document.querySelectorAll('[data-admin-only]').forEach(el => {
+    el.style.display = isAdmin ? '' : 'none';
+  });
+}
+
 function renderAuthState(){
   const locked = !currentUser;
   document.body.classList.toggle('auth-locked', locked);
@@ -65,6 +82,7 @@ function renderAuthState(){
     titleWrap.appendChild(mini);
   }
   if(mini) mini.textContent = currentUser?.email ? 'Login: ' + currentUser.email : '';
+  updateAdminUI();
 }
 
 async function initAuth(){
@@ -1467,7 +1485,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga Yonarta',
-    version: '2.1.1',
+    version: '2.1.3',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1558,7 +1576,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Catatan</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.1.0</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.1.3</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -1738,5 +1756,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.1.2 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.1.3 loaded');
 });

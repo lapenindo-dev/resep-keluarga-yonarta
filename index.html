@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.1.2</title>
+  <title>Resep Keluarga Yonarta v2.1.3</title>
   <meta name="theme-color" content="#f59e0b" />
-  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, backup data, koleksi resep, print resep, dan dashboard statistik." />
+  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Resep Yonarta" />
@@ -68,7 +68,7 @@
       <button class="primary wide" data-go="add">+ Tambah Resep</button>
       <button id="shareAppHomeBtn" class="secondary wide" type="button">📤 Share Aplikasi ke Keluarga</button>
       <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
-      <button class="secondary wide" data-go="tools">🧰 Backup / Koleksi / Print</button>
+      <button class="secondary wide" data-go="tools">📁 Koleksi / Print</button>
       <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Apa Hari Ini?</button></div>
       <div id="randomResult"></div>
       <h2>📊 Dashboard Keluarga</h2>
@@ -290,12 +290,12 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
 
 
     <section id="tools" class="page">
-      <h2>🧰 Backup / Koleksi / Print</h2>
-      <p class="muted">Pusat pengaturan data resep. Backup disimpan sebagai file JSON, koleksi disimpan di browser/HP ini.</p>
+      <h2>📁 Koleksi / Print</h2>
+      <p class="muted">Area sederhana untuk mengatur koleksi resep dan print resep. Backup JSON disembunyikan dari user keluarga.</p>
 
-      <div class="tool-card">
-        <h3>💾 Backup Data</h3>
-        <p class="muted">Export semua resep, master bahan, master satuan, jadwal menu, riwayat, dan koleksi ke file JSON.</p>
+      <div class="tool-card admin-only" data-admin-only="backup">
+        <h3>💾 Backup Data Admin</h3>
+        <p class="muted">Khusus admin. Export/import JSON hanya untuk pindah data atau restore darurat, bukan untuk pemakaian keluarga harian.</p>
         <button id="exportDataBtn" class="primary wide" type="button">⬇️ Export Backup JSON</button>
         <label>Import / Restore Backup JSON
           <input id="importDataFile" type="file" accept="application/json,.json" />
@@ -338,13 +338,13 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
     <button data-go="add">➕<span>Tambah</span></button>
     <button data-go="plan">📅<span>Jadwal</span></button>
     <button data-go="master">📚<span>Bahan</span></button>
-    <button data-go="tools">🧰<span>Tools</span></button>
+    <button data-go="tools">📁<span>Koleksi</span></button>
     <button data-go="gallery">🖼️<span>Galeri</span></button>
     <button data-go="history">🕒<span>Riwayat</span></button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=2.1.1"></script>
+  <script src="app.js?v=2.1.3"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
