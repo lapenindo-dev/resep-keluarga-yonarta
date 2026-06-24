@@ -731,6 +731,49 @@ function fileToBase64(file){
   });
 }
 
+/**
+ * Kompres & resize gambar di browser sebelum dikirim ke server.
+ * Mengecilkan dimensi maksimum dan re-encode sebagai JPEG kualitas sedang —
+ * mengurangi ukuran payload (hindari limit Vercel) dan biaya token Qwen.
+ */
+function compressImageFile(file, { maxDimension = 1600, quality = 0.75 } = {}){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > maxDimension || height > maxDimension){
+          if(width > height){
+            height = Math.round(height * (maxDimension / width));
+            width = maxDimension;
+          } else {
+            width = Math.round(width * (maxDimension / height));
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Gagal membaca gambar.'));
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function estimateBase64SizeKB(dataUrl){
+  // Rough estimate: base64 length * 0.75 = byte size
+  const base64Part = dataUrl.split(',')[1] || '';
+  return Math.round((base64Part.length * 0.75) / 1024);
+}
+
 async function callExtractRecipeApi(payload){
   const resp = await fetch('/api/extract-recipe', {
     method: 'POST',
@@ -765,12 +808,14 @@ function applyExtractedRecipe(recipe, sourceLabel){
 }
 
 async function handleAiExtractPhoto(){
-  const file = $('aiPhotoInput').files?.[0];
-  if(!file) return setAiStatus('Pilih foto dulu.', 'error');
-  setAiStatus('⏳ Membaca foto dengan AI... (bisa 10-20 detik)', 'loading');
+  const files = Array.from($('aiPhotoInput').files || []);
+  if(!files.length) return setAiStatus('Pilih minimal 1 foto dulu.', 'error');
+  setAiStatus(`⏳ Mengompres ${files.length} foto...`, 'loading');
   try {
-    const base64 = await fileToBase64(file);
-    const recipe = await callExtractRecipeApi({ mode: 'photo', imageBase64: base64 });
+    const images = await Promise.all(files.map(f => compressImageFile(f)));
+    const totalKB = images.reduce((sum, img) => sum + estimateBase64SizeKB(img), 0);
+    setAiStatus(`⏳ Membaca ${files.length} foto (~${totalKB} KB) dengan AI...`, 'loading');
+    const recipe = await callExtractRecipeApi({ mode: 'photo', imagesBase64: images });
     applyExtractedRecipe(recipe, 'AI');
   } catch(err){
     setAiStatus('❌ ' + err.message, 'error');
@@ -1109,6 +1154,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('aiExtractPhotoBtn').addEventListener('click', handleAiExtractPhoto);
   $('aiExtractYoutubeBtn').addEventListener('click', handleAiExtractYoutube);
   $('aiExtractTextBtn').addEventListener('click', handleAiExtractText);
+  $('aiPhotoInput').addEventListener('change', () => {
+    const files = Array.from($('aiPhotoInput').files || []);
+    $('aiPhotoPreview').innerHTML = files.map(f => `<div class="extra-thumb"><img src="${URL.createObjectURL(f)}" alt="Foto AI" /></div>`).join('');
+    setAiStatus(files.length ? `${files.length} foto siap diekstrak.` : null, 'loading');
+  });
 
   // Default plan start date = today
   if($('planStartDate')) $('planStartDate').value = new Date().toISOString().slice(0,10);

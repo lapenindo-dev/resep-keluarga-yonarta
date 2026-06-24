@@ -94,13 +94,14 @@
         </div>
 
         <div class="ai-panel active" data-aipanel="photo">
-          <p class="hint">Upload foto resep (tulisan tangan, cetak, atau foto makanan).</p>
-          <input id="aiPhotoInput" type="file" accept="image/*" />
+          <p class="hint">Upload beberapa foto sekaligus. Foto otomatis dikompres dulu sebelum dikirim, jadi tidak perlu khawatir ukuran file besar.</p>
+          <input id="aiPhotoInput" type="file" accept="image/*" multiple />
+          <div id="aiPhotoPreview" class="extra-photos-preview"></div>
           <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Ekstrak dari Foto</button>
         </div>
 
         <div class="ai-panel" data-aipanel="youtube">
-          <p class="hint">Paste link video YouTube. Transcript akan diambil otomatis.</p>
+          <p class="hint">Paste link video YouTube. Transcript akan dicoba diambil otomatis — kalau gagal (YouTube kadang blokir server), Anda akan diminta copy-paste manual dari fitur "Tampilkan transcript" di YouTube.</p>
           <input id="aiYoutubeInput" type="url" placeholder="https://youtube.com/watch?v=..." />
           <button class="primary wide" id="aiExtractYoutubeBtn" type="button">✨ Ambil dari YouTube</button>
         </div>
