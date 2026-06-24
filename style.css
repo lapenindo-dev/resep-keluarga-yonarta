@@ -273,3 +273,9 @@ label{display:block;margin:12px 0;font-weight:700;font-size:14px}
 @media (min-width:560px){
   .plan-actions{grid-template-columns:1fr 1fr 1fr}
 }
+
+.manual-transcript-box{margin-top:14px;padding-top:12px;border-top:1px dashed rgba(120,90,40,.35)}
+.manual-transcript-box textarea{min-height:120px;margin-top:8px}
+.hint.small{font-size:.88rem;line-height:1.45}
+button.secondary{background:#f8fafc;color:#3b2f2f;border:1px solid #d6c3a3;box-shadow:0 4px 0 rgba(120,90,40,.16)}
+button.secondary:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(120,90,40,.16)}

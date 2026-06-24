@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-yonarta-v2.0.1';
+const CACHE_NAME = 'resep-yonarta-v2.0.2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

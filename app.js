@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.0.1
+   Resep Keluarga Yonarta v2.0.2
    AI Menu Generator fleksibel + Shopping List + Dashboard Statistik
    AI Extract (Qwen): Foto, YouTube Transcript, TikTok/Teks Manual
    ===================================================== */
@@ -25,7 +25,7 @@ try { mealPlan = JSON.parse(localStorage.getItem('mealPlanV200') || localStorage
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
 const MEAL_LABELS = ['Siang','Malam'];
-// v2.0.1: slot tetap Siang dan Malam; jadwal lama yang punya Pagi dipotong
+// v2.0.2: YouTube transcript multi-metode + fallback manual; slot tetap Siang dan Malam
 mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
 
 const $ = (id) => document.getElementById(id);
@@ -1003,6 +1003,20 @@ async function handleAiExtractYoutube(){
   }
 }
 
+async function handleAiProcessYoutubeManual(){
+  const text = $('aiYoutubeManualText')?.value?.trim() || '';
+  const url = $('aiYoutubeInput')?.value?.trim() || '';
+  if(!text) return setAiStatus('Paste transcript/caption YouTube dulu di kolom manual.', 'error');
+  setAiStatus('⏳ Memproses transcript manual YouTube dengan AI...', 'loading');
+  try {
+    const recipe = await callExtractRecipeApi({ mode: 'text', rawText: text });
+    applyExtractedRecipe(recipe, 'YouTube');
+    if(url && $('link_sumber')) $('link_sumber').value = url;
+  } catch(err){
+    setAiStatus('❌ ' + err.message, 'error');
+  }
+}
+
 async function handleAiExtractText(){
   const text = $('aiTextInput').value.trim();
   if(!text) return setAiStatus('Tulis atau paste teks dulu.', 'error');
@@ -1354,6 +1368,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('aiExtractPhotoBtn').addEventListener('click', handleAiExtractPhoto);
   $('aiExtractYoutubeBtn').addEventListener('click', handleAiExtractYoutube);
   $('aiExtractTextBtn').addEventListener('click', handleAiExtractText);
+  if($('aiProcessYoutubeManualBtn')) $('aiProcessYoutubeManualBtn').addEventListener('click', handleAiProcessYoutubeManual);
   $('aiPhotoInput').addEventListener('change', () => {
     const files = Array.from($('aiPhotoInput').files || []);
     $('aiPhotoPreview').innerHTML = files.map(f => `<div class="extra-thumb"><img src="${URL.createObjectURL(f)}" alt="Foto AI" /></div>`).join('');
@@ -1368,5 +1383,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateBackButton();
   loadAll();
 
-  console.log('✅ Resep Keluarga Yonarta v2.0.1 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.0.2 loaded');
 });

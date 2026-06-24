@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.0.1</title>
+  <title>Resep Keluarga Yonarta v2.0.2</title>
   <meta name="theme-color" content="#f59e0b" />
   <meta name="description" content="Kumpulan resep keluarga Yonarta dengan meal planner, shopping list otomatis, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -110,9 +110,14 @@
         </div>
 
         <div class="ai-panel" data-aipanel="youtube">
-          <p class="hint">Paste link video YouTube. Transcript akan dicoba diambil otomatis — kalau gagal (YouTube kadang blokir server), Anda akan diminta copy-paste manual dari fitur "Tampilkan transcript" di YouTube.</p>
+          <p class="hint">Paste link video YouTube. Sistem akan mencoba beberapa metode otomatis. Jika tetap gagal, paste transcript manual di kolom bawah lalu klik Proses Teks Manual.</p>
           <input id="aiYoutubeInput" type="url" placeholder="https://youtube.com/watch?v=..." />
           <button class="primary wide" id="aiExtractYoutubeBtn" type="button">✨ Ambil dari YouTube</button>
+          <div class="manual-transcript-box">
+            <p class="hint small">Jika otomatis gagal: YouTube → deskripsi/⋯ Selengkapnya → Tampilkan transcript → copy → paste di sini.</p>
+            <textarea id="aiYoutubeManualText" placeholder="Paste transcript/caption YouTube di sini..."></textarea>
+            <button class="secondary wide" id="aiProcessYoutubeManualBtn" type="button">📝 Proses Teks Manual YouTube</button>
+          </div>
         </div>
 
         <div class="ai-panel" data-aipanel="text">
