@@ -1,4 +1,4 @@
-# Setup Fitur AI Qwen — v2.1.1
+# Setup Fitur AI Qwen — v2.1.2
 
 ## 1. Daftar & Dapatkan API Key Qwen
 1. Buka https://www.alibabacloud.com/help/en/model-studio/get-api-key
@@ -51,7 +51,7 @@ di bawah $1/bulan. Cek dashboard Alibaba Cloud Model Studio untuk monitor pemaka
 - **Error 401/403 dari Qwen** → API key salah atau belum aktif, cek di Alibaba Cloud Console
 
 
-## v2.1.1 — AI Menu Generator
+## v2.1.2 — AI Menu Generator
 
 Endpoint baru:
 
@@ -72,7 +72,7 @@ DASHSCOPE_API_KEY=isi_api_key_dashscope_anda
 ```
 
 
-## Catatan Teks/Caption v2.1.1
+## Catatan Teks/Caption v2.1.2
 
 Fitur ambil transcript YouTube otomatis sudah dihapus karena tidak stabil di Vercel/server hosting.
 
@@ -87,18 +87,35 @@ Cara input resep dari video:
 Tidak ada dependency tambahan untuk YouTube di `package.json`.
 
 
-## Login Email / Proteksi Akses v2.1.1
+## Login Email / Proteksi Akses v2.1.2
 
 Versi ini memakai Supabase Auth email magic link. Setelah upload versi ini:
 
 1. Buka Supabase Dashboard → Authentication → Providers → Email.
 2. Aktifkan Email provider.
 3. Untuk membatasi agar tidak sembarang orang bisa daftar, buka Authentication → Sign In / Providers dan matikan open signup bila tersedia, atau buat user keluarga secara manual dari Authentication → Users → Invite user.
-4. Jalankan file SQL `supabase-migration-v2.1.1-auth-rls.sql` di Supabase SQL Editor.
+4. Jalankan file SQL `supabase-migration-v2.1.2-auth-rls.sql` di Supabase SQL Editor.
 5. Pastikan semua email keluarga yang boleh masuk sudah diundang/dibuat di Supabase Auth.
 
-Catatan: policy SQL v2.1.1 membuat hanya user yang sudah login yang bisa baca/tambah/edit/hapus data. Semua user login keluarga berbagi data resep yang sama.
+Catatan: policy SQL v2.1.2 membuat hanya user yang sudah login yang bisa baca/tambah/edit/hapus data. Semua user login keluarga berbagi data resep yang sama.
 
 ## Share Aplikasi
 
 Tombol share tersedia di header dan beranda. Tombol ini membagikan link aplikasi ke WhatsApp/Telegram/dll, atau menyalin link bila browser tidak mendukung native share.
+
+
+## Login keluarga v2.1.2
+
+Jika muncul error `Signups not allowed for otp`, itu bukan error Qwen. Artinya Supabase menolak Magic Link karena email belum dibuat atau signup/OTP dibatasi.
+
+Cara paling aman untuk aplikasi keluarga:
+
+1. Buka Supabase Dashboard.
+2. Masuk ke **Authentication → Users**.
+3. Klik **Add user / Create new user**.
+4. Masukkan email anggota keluarga.
+5. Buat password sementara.
+6. Pastikan user dalam kondisi confirmed.
+7. Login di aplikasi memakai email + password tersebut.
+
+Magic Link tetap tersedia, tetapi hanya disarankan untuk email yang sudah terdaftar. Untuk mencegah orang sembarang masuk, jangan aktifkan open signup umum kecuali Anda memang ingin semua email bisa daftar sendiri.

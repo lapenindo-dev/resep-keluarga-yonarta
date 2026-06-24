@@ -1,6 +1,6 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.1.1
-   Login Email + Share Aplikasi + AI Menu Generator + Backup + Koleksi + Print/PDF
+   Resep Keluarga Yonarta v2.1.2
+   Login Email/Password + Share Aplikasi + AI Menu Generator + Backup + Koleksi + Print/PDF
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
 const SUPABASE_URL = 'https://eswokjdhyktikcxranpo.supabase.co';
@@ -30,7 +30,7 @@ const DEFAULT_COLLECTIONS = ['Menu Harian','Menu Anak','Natal','Imlek','BBQ','Fa
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
 const MEAL_LABELS = ['Siang','Malam'];
-// v2.1.0: YouTube otomatis tetap dihapus; tambah backup, koleksi, print/PDF
+// v2.1.2: login utama email/password; Magic Link tetap ada untuk email yang sudah terdaftar
 mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
 
 const $ = (id) => document.getElementById(id);
@@ -95,20 +95,48 @@ async function initAuth(){
   }
 }
 
+function friendlyAuthError(error){
+  const msg = (error?.message || String(error || '')).toLowerCase();
+  if(msg.includes('invalid login') || msg.includes('invalid credentials')){
+    return 'Email atau password salah. Pastikan user sudah dibuat di Supabase Authentication → Users.';
+  }
+  if(msg.includes('email not confirmed')){
+    return 'Email belum dikonfirmasi. Di Supabase Auth, pastikan user sudah confirmed / email_confirmed.';
+  }
+  if(msg.includes('signups not allowed') || msg.includes('otp')){
+    return 'Magic Link ditolak karena signup/OTP tidak aktif atau email belum dibuat. Buat user dulu di Supabase Authentication → Users, atau login memakai password.';
+  }
+  return error?.message || 'Login gagal. Coba lagi.';
+}
+
+async function loginWithPassword(){
+  const email = ($('loginEmail')?.value || '').trim();
+  const password = ($('loginPassword')?.value || '').trim();
+  if(!email) return setAuthStatus('Masukkan email dulu.', 'error');
+  if(!password) return setAuthStatus('Masukkan password dulu.', 'error');
+  setAuthStatus('Memproses login...', 'loading');
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if(error){
+    setAuthStatus('Gagal login: ' + friendlyAuthError(error), 'error');
+    return;
+  }
+  setAuthStatus('✅ Login berhasil. Memuat resep keluarga...', 'success');
+}
+
 async function sendLoginEmail(){
   const email = ($('loginEmail')?.value || '').trim();
   if(!email) return setAuthStatus('Masukkan email dulu.', 'error');
-  setAuthStatus('Mengirim link login ke email...', 'loading');
+  setAuthStatus('Mengirim magic link ke email...', 'loading');
   const redirectTo = window.location.origin + window.location.pathname;
   const { error } = await db.auth.signInWithOtp({
     email,
     options: { emailRedirectTo: redirectTo, shouldCreateUser: false }
   });
   if(error){
-    setAuthStatus('Gagal kirim link login: ' + error.message, 'error');
+    setAuthStatus('Gagal kirim magic link: ' + friendlyAuthError(error), 'error');
     return;
   }
-  setAuthStatus('✅ Link login sudah dikirim. Buka email, klik link login, lalu kembali ke aplikasi.', 'success');
+  setAuthStatus('✅ Magic link sudah dikirim. Buka email, klik link login, lalu kembali ke aplikasi.', 'success');
 }
 
 async function logout(){
@@ -1547,8 +1575,10 @@ window.printRecipe = (id) => {
 /* ========== INIT — all event handlers ========== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  if($('loginPasswordBtn')) $('loginPasswordBtn').addEventListener('click', loginWithPassword);
   if($('loginBtn')) $('loginBtn').addEventListener('click', sendLoginEmail);
-  if($('loginEmail')) $('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendLoginEmail(); });
+  if($('loginEmail')) $('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loginWithPassword(); });
+  if($('loginPassword')) $('loginPassword').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loginWithPassword(); });
   if($('logoutBtn')) $('logoutBtn').addEventListener('click', logout);
   if($('shareAppBtn')) $('shareAppBtn').addEventListener('click', shareApp);
   if($('shareAppHomeBtn')) $('shareAppHomeBtn').addEventListener('click', shareApp);
@@ -1708,5 +1738,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.1.1 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.1.2 loaded');
 });

@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.1.1</title>
+  <title>Resep Keluarga Yonarta v2.1.2</title>
   <meta name="theme-color" content="#f59e0b" />
-  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email, share aplikasi, meal planner, backup data, koleksi resep, print resep, dan dashboard statistik." />
+  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, backup data, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Resep Yonarta" />
@@ -21,14 +21,18 @@
     <div class="auth-card">
       <div class="auth-logo">🍳</div>
       <p class="eyebrow">Resep Keluarga Yonarta</p>
-      <h2>Masuk dengan Email</h2>
-      <p class="muted">Aplikasi ini hanya untuk keluarga. Masukkan email yang sudah diizinkan di Supabase Auth.</p>
+      <h2>Masuk Keluarga</h2>
+      <p class="muted">Aplikasi ini hanya untuk keluarga. Masuk memakai email dan password yang sudah dibuat di Supabase Auth.</p>
       <label>Email
         <input id="loginEmail" type="email" placeholder="nama@email.com" autocomplete="email" />
       </label>
-      <button id="loginBtn" class="primary wide" type="button">Kirim Link Login</button>
+      <label>Password
+        <input id="loginPassword" type="password" placeholder="Password akun keluarga" autocomplete="current-password" />
+      </label>
+      <button id="loginPasswordBtn" class="primary wide" type="button">Masuk</button>
+      <button id="loginBtn" class="secondary wide" type="button">Kirim Magic Link</button>
       <div id="authStatus" class="ai-status" style="display:none"></div>
-      <p class="hint">Tips: untuk membatasi akses, buat/undang email keluarga di Supabase Authentication dan matikan open signup bila perlu.</p>
+      <p class="hint">Paling aman: buat user keluarga dulu di Supabase Authentication → Users. Magic Link hanya berfungsi untuk email yang sudah terdaftar.</p>
     </div>
   </div>
   <!-- Install banner -->
