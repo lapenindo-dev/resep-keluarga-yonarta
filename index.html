@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.3.0</title>
+  <title>Resep Keluarga Yonarta v2.3.2</title>
   <meta name="theme-color" content="#f59e0b" />
   <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -107,9 +107,11 @@
         <button class="chip" data-filter="Sapi">Sapi</button>
         <button class="chip" data-filter="Seafood">Seafood</button>
         <button class="chip" data-filter="Sayur">Sayur</button>
-        <button class="chip" data-filter="Manual">✍️ Manual</button>
-        <button class="chip" data-filter="YouTube">📺 YouTube</button>
-        <button class="chip" data-filter="AI">🤖 AI</button>
+        <button class="chip" data-filter="Internet">🌐 Internet</button>
+        <button class="chip" data-filter="Warisan">📜 Warisan</button>
+        <button class="chip" data-filter="Keluarga">👨‍👩‍👧‍👦 Keluarga</button>
+        <button class="chip" data-filter="Teman">🤝 Teman</button>
+        <button class="chip" data-filter="Kreasi sendiri">✨ Kreasi sendiri</button>
       </div>
       <div id="recipeList" class="list"></div>
     </section>
@@ -158,13 +160,14 @@
           </div>
 
           <div class="input-method-card">
-            <h4>📝 Dari Caption / Teks</h4>
             <p class="hint">Paste caption TikTok/Instagram, transcript YouTube yang dicopy manual, atau catatan resep keluarga.</p>
             <label class="mini-label">Simpan sebagai sumber
               <select id="aiTextSource">
-                <option value="AI">AI</option>
-                <option value="YouTube">YouTube</option>
-                <option value="Manual">Manual</option>
+                <option value="Internet">Internet</option>
+                <option value="Warisan">Warisan</option>
+                <option value="Keluarga">Keluarga</option>
+                <option value="Teman">Teman</option>
+                <option value="Kreasi sendiri">Kreasi sendiri</option>
               </select>
             </label>
             <textarea id="aiTextInput" placeholder="Contoh:
@@ -227,11 +230,11 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
         </div>
         <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris"></textarea></label>
         <label>Sumber Resep
-          <select id="sumber_resep"><option>Manual</option><option>YouTube</option><option>AI</option></select>
+          <select id="sumber_resep"><option>Internet</option><option>Warisan</option><option>Keluarga</option><option>Teman</option><option>Kreasi sendiri</option></select>
         </label>
         <label>Tag<input id="tag" placeholder="air fryer, cepat, hemat" /></label>
         <label>Catatan Yonarta<textarea id="catatan_yonarta"></textarea></label>
-        <label>Link Sumber<input id="link_sumber" placeholder="YouTube / TikTok / website / sumber lain" /></label>
+        <label>Link Sumber<input id="link_sumber" placeholder="Website / sosial media / sumber lain" /></label>
         <button class="primary wide" type="submit">Simpan Resep</button>
         <button class="ghost wide" type="button" id="cancelEdit">Batal</button>
       </form>

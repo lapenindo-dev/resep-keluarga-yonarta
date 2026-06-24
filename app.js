@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.3.0
+   Resep Keluarga Yonarta v2.3.2
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
@@ -14,7 +14,7 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
 // v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
 // v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
-// v2.3.0: Beranda menampilkan maksimal 8 resep terbaru agar loading awal ringan.
+// v2.3.2: Beranda menampilkan maksimal 8 resep terbaru agar loading awal ringan.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -419,8 +419,24 @@ function isFavoriteRecipe(r){
   return ['Favorit Keluarga','Resep Andalan'].includes(r.status) || Number(r.rating_keluarga) === 5;
 }
 
+const RECIPE_SOURCES = ['Internet','Warisan','Keluarga','Teman','Kreasi sendiri'];
+
+function normalizeRecipeSource(src){
+  const value = String(src || '').trim();
+  if(RECIPE_SOURCES.includes(value)) return value;
+  // Kompatibilitas data lama sebelum v2.3.2
+  if(value === 'YouTube' || value === 'AI') return 'Internet';
+  if(value === 'Manual') return 'Kreasi sendiri';
+  return value || 'Kreasi sendiri';
+}
+
 function sourceIcon(src){
-  return src === 'YouTube' ? '📺' : src === 'AI' ? '🤖' : '✍️';
+  const value = normalizeRecipeSource(src);
+  if(value === 'Internet') return '🌐';
+  if(value === 'Warisan') return '📜';
+  if(value === 'Keluarga') return '👨‍👩‍👧‍👦';
+  if(value === 'Teman') return '🤝';
+  return '✨';
 }
 
 function recipeCard(r){
@@ -431,7 +447,7 @@ function recipeCard(r){
       ${ribbon}
       <button class="share-btn" onclick='event.stopPropagation();shareRecipe("${r.id}")' title="Bagikan resep">📤</button>
       ${photoStyle}
-      <span class="source-stamp">${sourceIcon(r.sumber_resep)} ${escapeHtml(r.sumber_resep || 'Manual')}</span>
+      <span class="source-stamp">${sourceIcon(r.sumber_resep)} ${escapeHtml(normalizeRecipeSource(r.sumber_resep))}</span>
     </div>
     <div class="recipe-info">
       <h3>${escapeHtml(r.nama_resep)}</h3>
@@ -684,7 +700,7 @@ window.viewRecipe = (id) => {
         <div><b>Durasi</b><span>${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : '-'}</span></div>
         <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
         <div><b>Dimasak Oleh</b><span>${escapeHtml(r.dimasak_oleh || '-')}</span></div>
-        <div><b>Sumber</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
+        <div><b>Sumber</b><span>${escapeHtml(normalizeRecipeSource(r.sumber_resep))}</span></div>
         <div><b>Penulis</b><span>${escapeHtml(recipeAuthorName(r))}</span></div>
         <div><b>Tanggal Dibuat</b><span>${formatDateTimeID(r.created_at)}</span></div>
         <div><b>Last Edit</b><span>${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}</span></div>
@@ -740,8 +756,8 @@ function renderRecipes(){
   const filtered = recipes.filter(r => {
     const hay = (JSON.stringify(r) + ' ' + flatIngredients(r.bahan).join(' ')).toLowerCase();
     const okSearch = !q || hay.includes(q);
-    const sourceFilters=['Manual','YouTube','AI'];
-    const okFilter = !activeFilter || (sourceFilters.includes(activeFilter) ? (r.sumber_resep||'Manual')===activeFilter : r.bahan_utama===activeFilter);
+    const sourceFilters=RECIPE_SOURCES;
+    const okFilter = !activeFilter || (sourceFilters.includes(activeFilter) ? normalizeRecipeSource(r.sumber_resep)===activeFilter : r.bahan_utama===activeFilter);
     return okSearch && okFilter;
   });
   $('recipeList').innerHTML = filtered.map(recipeCard).join('') || '<p class="muted">Tidak ada resep.</p>';
@@ -837,7 +853,7 @@ async function handleRecipeSubmit(e){
     foto_url: uploadedPhotoUrl || existing?.foto_url || null,
     foto_urls: extraPhotosState,
     dimasak_oleh: $('dimasak_oleh').value.trim(),
-    sumber_resep: $('sumber_resep') ? $('sumber_resep').value : 'Manual',
+    sumber_resep: $('sumber_resep') ? $('sumber_resep').value : 'Kreasi sendiri',
     penulis_nama: $('penulis_nama') ? $('penulis_nama').value.trim() : (existing?.penulis_nama || ''),
     penulis_email: existing?.penulis_email || '',
     last_edit_at: nowIso,
@@ -854,7 +870,8 @@ window.editRecipe = (id)=>{
   $('formTitle').textContent='✏️ Edit Resep'; $('recipeId').value=r.id;
   const banner = $('formModeBanner');
   if(banner){ banner.className='page-mode-banner edit-mode'; banner.innerHTML='<span>✏️ Mode Edit Resep</span><small>Anda sedang mengubah resep lama. Jangan lupa tekan Simpan.</small>'; }
-  ['nama_resep','penulis_nama','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','sumber_resep','dimasak_oleh'].forEach(k=>{ if($(k)) $(k).value=r[k]||''; });
+  ['nama_resep','penulis_nama','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','dimasak_oleh'].forEach(k=>{ if($(k)) $(k).value=r[k]||''; });
+  if($('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(r.sumber_resep);
   $('durasi_menit').value=r.durasi_menit||''; $('porsi').value=r.porsi||''; $('rating_keluarga').value=r.rating_keluarga||0;
   ingredientGroupsState = normalizeIngredientGroups(r.bahan);
   renderIngredientGroups();
@@ -1397,7 +1414,7 @@ function applyExtractedRecipe(recipe, sourceLabel){
     ingredientGroupsState = normalizeIngredientGroups(recipe.bahan);
     renderIngredientGroups();
   }
-  if(sourceLabel && $('sumber_resep')) $('sumber_resep').value = sourceLabel;
+  if(sourceLabel && $('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(sourceLabel);
   setAiStatus('✅ Resep berhasil diisi otomatis! Silakan periksa & lengkapi sebelum simpan.', 'success');
   window.scrollTo({top:0, behavior:'smooth'});
 }
@@ -1411,7 +1428,7 @@ async function handleAiExtractPhoto(){
     const totalKB = images.reduce((sum, img) => sum + estimateBase64SizeKB(img), 0);
     setAiStatus(`⏳ Membaca ${files.length} foto (~${totalKB} KB) dengan AI...`, 'loading');
     const recipe = await callExtractRecipeApi({ mode: 'photo', imagesBase64: images });
-    applyExtractedRecipe(recipe, 'AI');
+    applyExtractedRecipe(recipe, 'Internet');
   } catch(err){
     setAiStatus('❌ ' + err.message, 'error');
   }
@@ -1419,7 +1436,7 @@ async function handleAiExtractPhoto(){
 
 async function handleAiExtractText(){
   const text = $('aiTextInput').value.trim();
-  const source = $('aiTextSource')?.value || 'AI';
+  const source = $('aiTextSource')?.value || 'Internet';
   if(!text) return setAiStatus('Tulis atau paste teks dulu.', 'error');
   setAiStatus('⏳ Merapikan teks dengan AI...', 'loading');
   try {
@@ -1559,7 +1576,7 @@ function renderDashboard(){
   if($('dash5star')) $('dash5star').textContent = recipes.filter(r=>Number(r.rating_keluarga)===5).length;
   if($('dashTotalCooked')) $('dashTotalCooked').textContent = cookLog.length;
   if($('dashJenisTerbanyak')) $('dashJenisTerbanyak').textContent = mostCommonValue(recipes.map(r=>r.jenis_hidangan));
-  if($('dashSumberTerbanyak')) $('dashSumberTerbanyak').textContent = mostCommonValue(recipes.map(r=>r.sumber_resep));
+  if($('dashSumberTerbanyak')) $('dashSumberTerbanyak').textContent = mostCommonValue(recipes.map(r=>normalizeRecipeSource(r.sumber_resep)));
   renderCollectionStats();
   renderTopCooked();
   renderWeeklyChart();
@@ -1571,7 +1588,7 @@ function renderCollectionStats(){
   const groups = [
     ['Bahan utama', recipes.map(r=>r.bahan_utama)],
     ['Jenis hidangan', recipes.map(r=>r.jenis_hidangan)],
-    ['Sumber resep', recipes.map(r=>r.sumber_resep)],
+    ['Sumber resep', recipes.map(r=>normalizeRecipeSource(r.sumber_resep))],
     ['Siapa masak', recipes.map(r=>r.dimasak_oleh)]
   ];
   el.innerHTML = groups.map(([label, values]) => {
@@ -1784,7 +1801,7 @@ async function insertRecipesFromBackup(items){
       foto_url: r.foto_url || null,
       foto_urls: Array.isArray(r.foto_urls) ? r.foto_urls : [],
       dimasak_oleh: r.dimasak_oleh || '',
-      sumber_resep: r.sumber_resep || 'Manual',
+      sumber_resep: normalizeRecipeSource(r.sumber_resep),
       penulis_nama: r.penulis_nama || '',
       penulis_email: r.penulis_email || '',
       last_edit_at: r.last_edit_at || r.updated_at || r.created_at || new Date().toISOString(),
@@ -1839,11 +1856,11 @@ function buildPrintableRecipeHtml(r){
   <button onclick="window.print()">Print / Save PDF</button>
   <h1>${escapeHtml(r.nama_resep)}</h1>
   <div class="meta">${escapeHtml(r.bahan_utama||'-')} · ${escapeHtml(r.jenis_hidangan||'-')} · ${r.durasi_menit?escapeHtml(r.durasi_menit+' menit'):'-'} · ${r.porsi?escapeHtml(r.porsi+' porsi'):'-'}</div>
-  <div class="box"><b>Rating:</b> ${stars(r.rating_keluarga)}<br><b>Sumber:</b> ${escapeHtml(r.sumber_resep||'Manual')}<br><b>Dimasak oleh:</b> ${escapeHtml(r.dimasak_oleh||'-')}<br><b>Penulis:</b> ${escapeHtml(recipeAuthorName(r))}<br><b>Tanggal dibuat:</b> ${formatDateTimeID(r.created_at)}<br><b>Last edit:</b> ${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}<br><b>Koleksi:</b> ${escapeHtml(collectionNamesForRecipe(r.id).join(', ')||'-')}</div>
+  <div class="box"><b>Rating:</b> ${stars(r.rating_keluarga)}<br><b>Sumber:</b> ${escapeHtml(normalizeRecipeSource(r.sumber_resep))}<br><b>Dimasak oleh:</b> ${escapeHtml(r.dimasak_oleh||'-')}<br><b>Penulis:</b> ${escapeHtml(recipeAuthorName(r))}<br><b>Tanggal dibuat:</b> ${formatDateTimeID(r.created_at)}<br><b>Last edit:</b> ${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}<br><b>Koleksi:</b> ${escapeHtml(collectionNamesForRecipe(r.id).join(', ')||'-')}</div>
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Catatan</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.3.0</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.3.2</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2030,5 +2047,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.3.0 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.3.2 loaded');
 });
