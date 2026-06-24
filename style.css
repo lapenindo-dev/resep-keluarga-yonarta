@@ -367,7 +367,7 @@ button.secondary:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(120,90
 body.is-admin .admin-only{display:block!important}
 
 
-/* v2.2.7: clearer view/edit modes */
+/* v2.2.8: clearer view/edit modes */
 .page-mode-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);box-shadow:2px 3px 0 var(--border);background:var(--paper-card)}
 .page-mode-banner span{font-family:var(--display);font-weight:800;font-size:17px;color:var(--ink)}
 .page-mode-banner small{font-size:12px;color:var(--ink-soft);text-align:right;line-height:1.35}
@@ -376,8 +376,8 @@ body.is-admin .admin-only{display:block!important}
 .page-mode-banner.add-mode{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86a86a}
 .edit-mode-btn{font-weight:800}
 
-/* v2.2.7: two recipe cards per row */
-#recipeList,#latestList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+/* v2.3.0: two recipe cards per row + equal height cards */
+#recipeList,#latestList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
 #recipeList .recipe-card,#latestList .recipe-card{min-width:0;border-radius:10px;box-shadow:2px 3px 0 var(--border)}
 #recipeList .recipe-photo-wrap,#latestList .recipe-photo-wrap{width:calc(100% - 10px);margin:5px auto 0;border-radius:11px;border-width:2px;aspect-ratio:1/1}
 #recipeList .recipe-info,#latestList .recipe-info{padding:9px 9px 10px}
@@ -393,5 +393,18 @@ body.is-admin .admin-only{display:block!important}
 #recipeList .card-actions,#latestList .card-actions{gap:5px;margin-top:7px}
 #recipeList .card-actions button,#latestList .card-actions button{padding:7px 4px;font-size:11px}
 #recipeList .tag-pill,#latestList .tag-pill{font-size:10px;padding:3px 6px}
+
+/* v2.3.0: make recipe cards in the same row align evenly */
+#recipeList .recipe-card,#latestList .recipe-card{height:100%;display:flex;flex-direction:column}
+#recipeList .recipe-info,#latestList .recipe-info{flex:1;display:flex;flex-direction:column}
+#recipeList .recipe-info h3,#latestList .recipe-info h3{min-height:34px}
+#recipeList .recipe-meta,#latestList .recipe-meta{min-height:28px}
+#recipeList .recipe-audit,#latestList .recipe-audit{min-height:40px}
+#recipeList .cook-by,#latestList .cook-by{min-height:16px}
+#recipeList .stars,#latestList .stars{min-height:16px}
+#recipeList .card-actions,#latestList .card-actions{margin-top:auto}
+
 @media (min-width:760px){#recipeList,#latestList{grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media (max-width:360px){#recipeList,#latestList{gap:9px}#recipeList .recipe-info h3,#latestList .recipe-info h3{font-size:13.5px}#recipeList .card-actions button,#latestList .card-actions button{font-size:10px}}
+
+.mini-note{margin-top:-8px;margin-bottom:12px;font-size:12px;opacity:.78}

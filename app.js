@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.2.7
+   Resep Keluarga Yonarta v2.3.0
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
@@ -14,7 +14,7 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
 // v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
 // v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
-// v2.2.7: Tombol back device/browser diarahkan ke navigasi internal aplikasi dulu.
+// v2.3.0: Beranda menampilkan maksimal 8 resep terbaru agar loading awal ringan.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -724,7 +724,16 @@ window.markAsCooked = async (id) => {
 
 /* ---------- Recipe list / search / filter ---------- */
 
-function renderLatest(){ $('latestList').innerHTML = recipes.slice(0,5).map(recipeCard).join('') || '<p class="muted">Belum ada resep.</p>'; }
+function renderLatest(){
+  document.querySelectorAll('.home-more-recipes').forEach(el => el.remove());
+  const homeLimit = 8;
+  const homeRecipes = recipes.slice(0, homeLimit);
+  if($('latestTitle')) $('latestTitle').textContent = recipes.length > homeLimit ? `Resep Terbaru (${homeLimit} dari ${recipes.length})` : `Daftar Resep (${recipes.length})`;
+  $('latestList').innerHTML = homeRecipes.map(recipeCard).join('') || '<p class="muted">Belum ada resep.</p>';
+  if(recipes.length > homeLimit){
+    $('latestList').insertAdjacentHTML('afterend', '<button class="secondary full-width home-more-recipes" onclick="go(\'recipes\')">📖 Lihat Semua Resep</button>');
+  }
+}
 
 function renderRecipes(){
   const q = ($('searchInput').value || '').toLowerCase();
@@ -1834,7 +1843,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Catatan</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.2.7</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.3.0</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2021,5 +2030,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.2.7 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.3.0 loaded');
 });

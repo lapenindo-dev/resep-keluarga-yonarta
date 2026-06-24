@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.2.7</title>
+  <title>Resep Keluarga Yonarta v2.3.0</title>
   <meta name="theme-color" content="#f59e0b" />
   <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -90,7 +90,8 @@
         <h4>📅 Aktivitas 7 Hari Terakhir</h4>
         <div id="weeklyChart" class="weekly-chart"></div>
       </div>
-      <h2>Resep Terbaru</h2>
+      <h2 id="latestTitle">Daftar Resep</h2>
+      <p class="muted mini-note">Semua resep ditampilkan di sini supaya jumlahnya sesuai dengan Total Resep.</p>
       <div id="latestList" class="list"></div>
     </section>
 
@@ -372,7 +373,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=2.2.7"></script>
+  <script src="app.js?v=2.2.8"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
