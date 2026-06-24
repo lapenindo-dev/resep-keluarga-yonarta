@@ -1,4 +1,4 @@
-# Setup Fitur AI Extract (Qwen) — v1.4.0
+# Setup Fitur AI Qwen — v2.0.0
 
 ## 1. Daftar & Dapatkan API Key Qwen
 1. Buka https://www.alibabacloud.com/help/en/model-studio/get-api-key
@@ -49,3 +49,24 @@ di bawah $1/bulan. Cek dashboard Alibaba Cloud Model Studio untuk monitor pemaka
 - **"DASHSCOPE_API_KEY belum diset"** → cek langkah 2, pastikan sudah redeploy
 - **YouTube "tidak memiliki transcript"** → video tidak ada caption sama sekali, pakai tab "TikTok/Teks" untuk input manual
 - **Error 401/403 dari Qwen** → API key salah atau belum aktif, cek di Alibaba Cloud Console
+
+
+## v2.0.0 — AI Menu Generator
+
+Endpoint baru:
+
+- `/api/generate-menu`
+
+Fungsi:
+
+- Membuat jadwal menu 1–7 hari.
+- Slot tetap Siang dan Malam.
+- Menggunakan daftar resep yang sudah tersimpan.
+- Menghormati menu yang dikunci/lock.
+- Jika AI gagal atau env belum aktif, aplikasi otomatis fallback ke generator random lokal.
+
+Environment variable yang dipakai tetap sama:
+
+```
+DASHSCOPE_API_KEY=isi_api_key_dashscope_anda
+```

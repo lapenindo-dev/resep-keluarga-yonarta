@@ -1,7 +1,7 @@
 {
   "name": "Resep Keluarga Yonarta",
   "short_name": "Resep Yonarta",
-  "description": "Kumpulan resep keluarga Yonarta dengan meal planner & daftar belanja otomatis",
+  "description": "Kumpulan resep keluarga Yonarta dengan AI menu generator fleksibel & daftar belanja otomatis",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fff7ed",

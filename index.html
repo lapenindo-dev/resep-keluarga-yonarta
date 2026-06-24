@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta</title>
+  <title>Resep Keluarga Yonarta v2.0.0</title>
   <meta name="theme-color" content="#f59e0b" />
-  <meta name="description" content="Kumpulan resep keluarga Yonarta" />
+  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan meal planner, shopping list otomatis, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Resep Yonarta" />
@@ -27,9 +27,12 @@
   </div>
 
   <header class="topbar">
-    <div>
-      <p class="eyebrow">Resep Keluarga</p>
-      <h1>Yonarta</h1>
+    <div class="topbar-left">
+      <button id="backBtn" class="icon-btn" title="Kembali" style="display:none">←</button>
+      <div>
+        <p class="eyebrow">Resep Keluarga</p>
+        <h1>Yonarta</h1>
+      </div>
     </div>
     <button id="refreshBtn" class="icon-btn" title="Refresh data">⟳</button>
   </header>
@@ -44,14 +47,20 @@
       <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
       <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Apa Hari Ini?</button></div>
       <div id="randomResult"></div>
-      <h2>📊 Statistik Masak</h2>
-      <div class="stats">
+      <h2>📊 Dashboard Keluarga</h2>
+      <div class="stats dashboard-stats">
         <div class="card"><b id="dash5star">0</b><span>Rating 5⭐</span></div>
         <div class="card"><b id="dashTotalCooked">0</b><span>Total Kali Masak</span></div>
+        <div class="card"><b id="dashJenisTerbanyak">-</b><span>Jenis Terbanyak</span></div>
+        <div class="card"><b id="dashSumberTerbanyak">-</b><span>Sumber Terbanyak</span></div>
       </div>
       <div class="stat-block">
         <h4>🏆 Resep Paling Sering Dimasak</h4>
         <div id="topCookedList" class="top-cooked-list"></div>
+      </div>
+      <div class="stat-block">
+        <h4>📊 Ringkasan Koleksi</h4>
+        <div id="collectionStats" class="collection-stats"></div>
       </div>
       <div class="stat-block">
         <h4>📅 Aktivitas 7 Hari Terakhir</h4>
@@ -189,10 +198,23 @@
 
     <section id="plan" class="page">
       <h2>📅 Jadwal Menu</h2>
+      <p class="muted">Buat jadwal menu keluarga otomatis dengan AI untuk 1–7 hari. Slot tetap Siang dan Malam.</p>
       <div class="plan-controls">
         <label>Mulai dari Tanggal<input id="planStartDate" type="date" /></label>
-        <label>Jumlah Hari<input id="jumlahHari" type="number" value="7" min="1" max="14" /></label>
-        <label>Menu per Hari<input id="menuPerHari" type="number" value="2" min="1" max="3" /></label>
+        <label>Jumlah Hari
+          <select id="jumlahHari">
+            <option value="1">1 hari</option>
+            <option value="2">2 hari</option>
+            <option value="3">3 hari</option>
+            <option value="4">4 hari</option>
+            <option value="5">5 hari</option>
+            <option value="6">6 hari</option>
+            <option value="7" selected>7 hari</option>
+          </select>
+        </label>
+        <label>Slot Menu
+          <input value="Siang + Malam" readonly />
+        </label>
         <label>Mode
           <select id="modeRandom">
             <option value="all">🎲 Random Semua</option>
@@ -202,10 +224,13 @@
           </select>
         </label>
       </div>
-      <button id="generatePlan" class="primary wide">🎲 Buat Jadwal</button>
+      <button id="generatePlan" class="primary wide">🤖 Buat Menu dengan AI</button>
+      <div id="planAiStatus" class="ai-status" style="display:none"></div>
       <div id="planResult"></div>
-      <div id="planActions" style="display:none">
+      <div id="planActions" class="plan-actions" style="display:none">
         <button id="generateShoppingList" class="primary wide">🛒 Buat Daftar Belanja</button>
+        <button id="copyPlanBtn" class="secondary wide" type="button">📋 Copy Jadwal</button>
+        <button id="clearPlanBtn" class="ghost wide" type="button">🗑️ Hapus Jadwal</button>
       </div>
       <div id="shoppingListResult"></div>
     </section>

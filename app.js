@@ -1,6 +1,7 @@
 /* =====================================================
-   Resep Keluarga Yonarta v1.4.0 — AI Extract (Qwen):
-   Foto, YouTube Transcript, TikTok/Teks Manual
+   Resep Keluarga Yonarta v2.0.0
+   AI Menu Generator fleksibel + Shopping List + Dashboard Statistik
+   AI Extract (Qwen): Foto, YouTube Transcript, TikTok/Teks Manual
    ===================================================== */
 const SUPABASE_URL = 'https://eswokjdhyktikcxranpo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_pV3wADDW91aY_0fbOSS39g_cUt39Cnu';
@@ -19,10 +20,13 @@ let extraPhotosState = []; // urls for current form (existing + newly uploaded)
 let mealPlan = [];
 let recipeHistory = [];
 try { recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]'); } catch(e){}
+try { mealPlan = JSON.parse(localStorage.getItem('mealPlanV200') || localStorage.getItem('mealPlanV190') || '[]'); } catch(e){ mealPlan = []; }
 
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
-const MEAL_LABELS = ['Pagi','Siang','Malam'];
+const MEAL_LABELS = ['Siang','Malam'];
+// v2.0.0: slot tetap Siang dan Malam; jadwal lama yang punya Pagi dipotong
+mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
 
 const $ = (id) => document.getElementById(id);
 const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean);
@@ -101,11 +105,34 @@ window.removeExtraPhoto = (i) => {
 
 /* ---------- Navigation ---------- */
 
-function go(page){
+let navHistory = ['home'];
+
+function go(page, opts={}){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const el = $(page);
   if(el) el.classList.add('active');
   document.querySelectorAll('[data-go]').forEach(b=>b.classList.toggle('active', b.dataset.go===page));
+  if(page === 'add' && !opts.keepAiPanel) clearAiPanel();
+  if(!opts.skipHistory && navHistory[navHistory.length-1] !== page){
+    navHistory.push(page);
+  }
+  updateBackButton();
+}
+
+function goBack(){
+  if(navHistory.length > 1){
+    navHistory.pop();
+    const prev = navHistory[navHistory.length-1];
+    go(prev, { skipHistory: true });
+  } else {
+    go('home', { skipHistory: true });
+  }
+}
+
+function updateBackButton(){
+  const btn = $('backBtn');
+  if(!btn) return;
+  btn.style.display = navHistory.length > 1 ? 'flex' : 'none';
 }
 
 /* ---------- Data loading ---------- */
@@ -135,7 +162,7 @@ function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
   renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
-  renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory();
+  renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory(); renderMealPlan();
 }
 
 function renderCookNameOptions(){
@@ -458,21 +485,63 @@ function formatPlanDate(dateObj){
   return dateObj.toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
 }
 
-function generatePlan(){
-  const startVal = $('planStartDate').value;
-  const startDate = startVal ? new Date(startVal + 'T00:00:00') : new Date();
-  const days = Math.min(Number($('jumlahHari').value || 7), 14);
-  const meals = Math.min(Number($('menuPerHari').value || 2), 3);
-  const pool = getFilteredPool();
-  if(!pool.length) return alert('Belum ada resep yang cocok dengan mode ini.');
+function saveMealPlan(){
+  try { localStorage.setItem('mealPlanV200', JSON.stringify(mealPlan)); } catch(e){}
+}
 
+function buildPlanText(){
+  if(!mealPlan.length) return '';
+  let text = '📅 JADWAL MENU KELUARGA\n\n';
+  mealPlan.forEach(d => {
+    const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
+    text += `${dateLabel}\n`;
+    d.meals.forEach((m,i) => {
+      const r = recipes.find(x=>x.id===m.recipeId);
+      text += `- ${MEAL_LABELS[i] || 'Menu'}: ${r ? r.nama_resep : '?'}\n`;
+    });
+    text += '\n';
+  });
+  return text.trim();
+}
+
+window.copyMealPlan = (evt) => {
+  const text = buildPlanText();
+  if(!text) return;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = evt?.target;
+    if(btn){ const orig = btn.textContent; btn.textContent = '✅ Jadwal tersalin!'; setTimeout(()=>btn.textContent=orig, 1500); }
+  }).catch(()=>alert('Gagal copy jadwal.'));
+};
+
+window.clearMealPlan = () => {
+  if(!mealPlan.length) return;
+  if(!confirm('Hapus jadwal menu yang sedang tampil?')) return;
+  mealPlan = [];
+  saveMealPlan();
+  renderMealPlan();
+};
+
+function setPlanAiStatus(message, type){
+  const el = $('planAiStatus');
+  if(!el) return;
+  if(!message){ el.style.display = 'none'; el.textContent = ''; el.className = 'ai-status'; return; }
+  el.style.display = 'block';
+  el.textContent = message;
+  el.className = `ai-status ${type||''}`;
+}
+
+function clampPlanDays(value){
+  const n = Number(value || 7);
+  return Math.max(1, Math.min(n, 7));
+}
+
+function buildRandomPlan({ startDate, days, meals, pool }){
   const newPlan = [];
   const usedIds = [];
   for(let d=1; d<=days; d++){
     const thisDate = new Date(startDate);
     thisDate.setDate(startDate.getDate() + (d-1));
     const dateKey = thisDate.toISOString().slice(0,10);
-    // preserve locked meals from existing plan with the SAME date (so changing start date doesn't carry over wrong locks)
     const existingDay = mealPlan.find(x=>x.dateKey===dateKey);
     const dayMeals = [];
     for(let m=0; m<meals; m++){
@@ -481,21 +550,108 @@ function generatePlan(){
         dayMeals.push({...existingMeal});
         usedIds.push(existingMeal.recipeId);
       } else {
-        const pick = pickRandom(pool, usedIds);
-        dayMeals.push({ recipeId: pick.id, locked: false });
+        const usedInDay = dayMeals.map(x=>x.recipeId);
+        const pick = pickRandom(pool, [...usedIds, ...usedInDay]);
+        dayMeals.push({ recipeId: pick.id, locked: false, source: 'random' });
         usedIds.push(pick.id);
       }
     }
     newPlan.push({ day: d, date: thisDate, dateKey, meals: dayMeals });
   }
-  mealPlan = newPlan;
-  renderMealPlan();
+  return newPlan;
+}
+
+function normalizeAiPlan(aiPlan, { startDate, days, meals, pool }){
+  if(!Array.isArray(aiPlan)) throw new Error('Format jadwal AI tidak valid.');
+  const poolIds = new Set(pool.map(r=>String(r.id)));
+  const newPlan = [];
+  for(let d=1; d<=days; d++){
+    const thisDate = new Date(startDate);
+    thisDate.setDate(startDate.getDate() + (d-1));
+    const dateKey = thisDate.toISOString().slice(0,10);
+    const existingDay = mealPlan.find(x=>x.dateKey===dateKey);
+    const aiDay = aiPlan[d-1] || {};
+    const srcMeals = Array.isArray(aiDay.meals) ? aiDay.meals : [];
+    const dayMeals = [];
+    for(let m=0; m<meals; m++){
+      const existingMeal = existingDay?.meals?.[m];
+      if(existingMeal?.locked){
+        dayMeals.push({...existingMeal});
+        continue;
+      }
+      const wantedLabel = MEAL_LABELS[m];
+      const aiMeal = srcMeals.find(x=>String(x.label||'').toLowerCase()===wantedLabel.toLowerCase()) || srcMeals[m] || {};
+      const recipeId = String(aiMeal.recipeId || aiMeal.recipe_id || '');
+      if(poolIds.has(recipeId)){
+        dayMeals.push({ recipeId, locked: false, reason: aiMeal.reason || '', source: 'ai' });
+      }
+    }
+    while(dayMeals.length < meals){
+      const pick = pickRandom(pool, dayMeals.map(x=>x.recipeId));
+      dayMeals.push({ recipeId: pick.id, locked: false, source: 'fallback' });
+    }
+    newPlan.push({ day: d, date: thisDate, dateKey, meals: dayMeals.slice(0, meals) });
+  }
+  return newPlan;
+}
+
+async function callGenerateMenuApi(payload){
+  const resp = await fetch('/api/generate-menu', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await resp.json().catch(()=>({}));
+  if(!resp.ok) throw new Error(data.error || 'AI Menu Generator gagal.');
+  return data.plan;
+}
+
+async function generatePlan(){
+  const startVal = $('planStartDate').value;
+  const startDate = startVal ? new Date(startVal + 'T00:00:00') : new Date();
+  const days = clampPlanDays($('jumlahHari').value);
+  const meals = 2;
+  const mode = $('modeRandom').value;
+  const pool = getFilteredPool();
+  if(!pool.length) return alert('Belum ada resep yang cocok dengan mode ini.');
+
+  // Pastikan UI tetap sesuai keputusan: maksimum 7 hari, tanpa slot Pagi.
+  $('jumlahHari').value = String(days);
+  setPlanAiStatus(`⏳ AI sedang menyusun menu ${days} hari (${days*meals} menu)...`, 'loading');
+
+  try {
+    const recipesForAi = pool.slice(0, 120).map(r => ({
+      id: String(r.id),
+      nama_resep: r.nama_resep,
+      bahan_utama: r.bahan_utama || '',
+      jenis_hidangan: r.jenis_hidangan || '',
+      durasi_menit: r.durasi_menit || null,
+      status: r.status || '',
+      rating_keluarga: r.rating_keluarga || 0,
+      tag: Array.isArray(r.tag) ? r.tag : []
+    }));
+    const lockedMeals = mealPlan.flatMap(d => (d.meals||[]).map((m,i)=>({ dateKey:d.dateKey, label:MEAL_LABELS[i], recipeId:m.recipeId, locked:!!m.locked })).filter(x=>x.locked));
+    const aiPlan = await callGenerateMenuApi({
+      days, meals, mode, startDate: startDate.toISOString().slice(0,10), labels: MEAL_LABELS.slice(0, meals), recipes: recipesForAi, lockedMeals
+    });
+    mealPlan = normalizeAiPlan(aiPlan, { startDate, days, meals, pool });
+    saveMealPlan();
+    renderMealPlan();
+    setPlanAiStatus(`✅ Menu ${days} hari berhasil dibuat dengan AI.`, 'success');
+  } catch(err) {
+    console.warn('AI menu generator fallback:', err);
+    mealPlan = buildRandomPlan({ startDate, days, meals, pool });
+    saveMealPlan();
+    renderMealPlan();
+    setPlanAiStatus(`⚠️ AI belum aktif/gagal (${err.message}). Jadwal tetap dibuat otomatis tanpa AI.`, 'error');
+  }
 }
 
 window.toggleLockMeal = (day, mealIdx) => {
   const d = mealPlan.find(x=>x.day===day);
   if(!d || !d.meals[mealIdx]) return;
   d.meals[mealIdx].locked = !d.meals[mealIdx].locked;
+  saveMealPlan();
   renderMealPlan();
 };
 
@@ -507,6 +663,7 @@ window.randomizeDayMeal = (day, mealIdx) => {
   const usedInDay = d.meals.filter((_,i)=>i!==mealIdx).map(m=>m.recipeId);
   const pick = pickRandom(pool, usedInDay);
   d.meals[mealIdx].recipeId = pick.id;
+  saveMealPlan();
   renderMealPlan();
 };
 
@@ -523,6 +680,7 @@ window.randomizeDay = (day) => {
     }
     usedIds.push(meal.recipeId);
   });
+  saveMealPlan();
   renderMealPlan();
 };
 
@@ -534,7 +692,9 @@ function renderMealPlan(){
     return;
   }
 
-  let html = '<div class="plan-grid">';
+  const totalMenus = mealPlan.reduce((s,d)=>s+d.meals.length,0);
+  let html = `<div class="plan-summary">✅ ${mealPlan.length} hari · ${totalMenus} menu · otomatis tersimpan di HP/browser ini</div>`;
+  html += '<div class="plan-grid">';
   mealPlan.forEach(d => {
     const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
     html += `<div class="plan-day">
@@ -720,6 +880,14 @@ function setAiStatus(message, type){
   el.style.display = 'block';
   el.className = `ai-status ${type||''}`;
   el.textContent = message;
+}
+
+function clearAiPanel(){
+  if($('aiPhotoInput')) $('aiPhotoInput').value = '';
+  if($('aiPhotoPreview')) $('aiPhotoPreview').innerHTML = '';
+  if($('aiYoutubeInput')) $('aiYoutubeInput').value = '';
+  if($('aiTextInput')) $('aiTextInput').value = '';
+  setAiStatus(null);
 }
 
 function fileToBase64(file){
@@ -959,11 +1127,38 @@ function renderMasterUnits(){
 
 /* ========== DASHBOARD / GALLERY / HISTORY ========== */
 
+function mostCommonValue(list, fallback='-'){
+  const counts = {};
+  list.filter(Boolean).forEach(v => { counts[v] = (counts[v]||0) + 1; });
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  return top ? `${top[0]} (${top[1]})` : fallback;
+}
+
 function renderDashboard(){
   if($('dash5star')) $('dash5star').textContent = recipes.filter(r=>Number(r.rating_keluarga)===5).length;
   if($('dashTotalCooked')) $('dashTotalCooked').textContent = cookLog.length;
+  if($('dashJenisTerbanyak')) $('dashJenisTerbanyak').textContent = mostCommonValue(recipes.map(r=>r.jenis_hidangan));
+  if($('dashSumberTerbanyak')) $('dashSumberTerbanyak').textContent = mostCommonValue(recipes.map(r=>r.sumber_resep));
+  renderCollectionStats();
   renderTopCooked();
   renderWeeklyChart();
+}
+
+function renderCollectionStats(){
+  const el = $('collectionStats'); if(!el) return;
+  if(!recipes.length){ el.innerHTML = '<p class="muted">Belum ada resep.</p>'; return; }
+  const groups = [
+    ['Bahan utama', recipes.map(r=>r.bahan_utama)],
+    ['Jenis hidangan', recipes.map(r=>r.jenis_hidangan)],
+    ['Sumber resep', recipes.map(r=>r.sumber_resep)],
+    ['Siapa masak', recipes.map(r=>r.dimasak_oleh)]
+  ];
+  el.innerHTML = groups.map(([label, values]) => {
+    const counts = {};
+    values.filter(Boolean).forEach(v => counts[v] = (counts[v]||0)+1);
+    const top3 = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    return `<div class="collection-stat-row"><b>${label}</b><span>${top3.length ? top3.map(([k,v])=>`${escapeHtml(k)} ${v}`).join(' · ') : '-'}</span></div>`;
+  }).join('');
 }
 
 function renderTopCooked(){
@@ -1045,9 +1240,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(()=>{ btn.textContent = origText; btn.disabled = false; }, 1000);
   });
 
+  // Back navigation (top of app)
+  $('backBtn').addEventListener('click', goBack);
+
   // Back & Cancel
-  $('backToRecipes').addEventListener('click', () => go('recipes'));
-  $('cancelEdit').addEventListener('click', () => { resetForm(); go('home'); window.scrollTo({top:0, behavior:'smooth'}); });
+  $('backToRecipes').addEventListener('click', goBack);
+  $('cancelEdit').addEventListener('click', () => { resetForm(); goBack(); window.scrollTo({top:0, behavior:'smooth'}); });
 
   // Photo preview
   $('foto_file').addEventListener('change', () => {
@@ -1089,6 +1287,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Meal planner
   $('generatePlan').addEventListener('click', generatePlan);
   $('generateShoppingList').addEventListener('click', generateShoppingList);
+  if($('copyPlanBtn')) $('copyPlanBtn').addEventListener('click', copyMealPlan);
+  if($('clearPlanBtn')) $('clearPlanBtn').addEventListener('click', clearMealPlan);
 
   // Master forms
   $('masterIngredientForm').addEventListener('submit', handleMasterIngredientSubmit);
@@ -1165,7 +1365,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Init
   resetForm();
+  updateBackButton();
   loadAll();
 
-  console.log('✅ Resep Keluarga Yonarta v1.3.0 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.0.0 loaded');
 });
