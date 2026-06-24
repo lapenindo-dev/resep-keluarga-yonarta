@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.0.3</title>
+  <title>Resep Keluarga Yonarta v2.1.0</title>
   <meta name="theme-color" content="#f59e0b" />
-  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan meal planner, shopping list otomatis, dan dashboard statistik." />
+  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan meal planner, backup data, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Resep Yonarta" />
@@ -45,6 +45,7 @@
       </div>
       <button class="primary wide" data-go="add">+ Tambah Resep</button>
       <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
+      <button class="secondary wide" data-go="tools">🧰 Backup / Koleksi / Print</button>
       <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Apa Hari Ini?</button></div>
       <div id="randomResult"></div>
       <h2>📊 Dashboard Keluarga</h2>
@@ -94,14 +95,20 @@
 
       <div class="ai-extract-box">
         <div class="section-title-row">
-          <h3>✨ Isi Otomatis dengan AI</h3>
+          <h3>✨ Bantu Isi Resep</h3>
         </div>
         <div class="ai-tabs">
-          <button class="ai-tab active" data-aitab="photo" type="button">📷 Foto</button>
+          <button class="ai-tab active" data-aitab="manual" type="button">✍️ Manual</button>
+          <button class="ai-tab" data-aitab="photo" type="button">📷 Foto</button>
           <button class="ai-tab" data-aitab="text" type="button">📝 Teks / Caption</button>
         </div>
 
-        <div class="ai-panel active" data-aipanel="photo">
+        <div class="ai-panel active" data-aipanel="manual">
+          <p class="hint">Isi form resep secara manual. Pilih sumber resep di bagian bawah form: Manual, YouTube, atau AI.</p>
+          <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">✍️ Mulai Isi Manual</button>
+        </div>
+
+        <div class="ai-panel" data-aipanel="photo">
           <p class="hint">Upload beberapa foto sekaligus. Foto otomatis dikompres dulu sebelum dikirim, jadi tidak perlu khawatir ukuran file besar.</p>
           <input id="aiPhotoInput" type="file" accept="image/*" multiple />
           <div id="aiPhotoPreview" class="extra-photos-preview"></div>
@@ -110,7 +117,7 @@
 
 
         <div class="ai-panel" data-aipanel="text">
-          <p class="hint">Paste caption, transcript manual, teks TikTok, catatan resep, atau teks dari YouTube. Sistem tidak lagi mengambil YouTube otomatis.</p>
+          <p class="hint">Paste teks resep, caption TikTok/Instagram, transcript YouTube yang dicopy manual, atau catatan resep keluarga. Sistem tidak mengambil YouTube otomatis.</p>
           <label class="mini-label">Simpan sebagai sumber
             <select id="aiTextSource">
               <option value="AI">AI</option>
@@ -118,7 +125,9 @@
               <option value="Manual">Manual</option>
             </select>
           </label>
-          <textarea id="aiTextInput" placeholder="Contoh: Bahan: 500gr ayam, 3 bawang putih... Cara: tumis bawang sampai harum..."></textarea>
+          <textarea id="aiTextInput" placeholder="Contoh:
+Bahan: 500gr ayam, 3 siung bawang putih, 2 sdm kecap.
+Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
           <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan dengan AI</button>
         </div>
 
@@ -221,7 +230,6 @@
             <option value="all">🎲 Random Semua</option>
             <option value="fav">❤️ Favorit Keluarga</option>
             <option value="fast">⚡ Menu Cepat (≤30 menit)</option>
-            <option value="hemat">💰 Menu Hemat</option>
           </select>
         </label>
       </div>
@@ -257,6 +265,39 @@
       <div id="masterUnitList" class="tags"></div>
     </section>
 
+
+    <section id="tools" class="page">
+      <h2>🧰 Backup / Koleksi / Print</h2>
+      <p class="muted">Pusat pengaturan data resep. Backup disimpan sebagai file JSON, koleksi disimpan di browser/HP ini.</p>
+
+      <div class="tool-card">
+        <h3>💾 Backup Data</h3>
+        <p class="muted">Export semua resep, master bahan, master satuan, jadwal menu, riwayat, dan koleksi ke file JSON.</p>
+        <button id="exportDataBtn" class="primary wide" type="button">⬇️ Export Backup JSON</button>
+        <label>Import / Restore Backup JSON
+          <input id="importDataFile" type="file" accept="application/json,.json" />
+        </label>
+        <button id="importDataBtn" class="secondary wide" type="button">⬆️ Import / Restore</button>
+        <div id="backupStatus" class="ai-status" style="display:none"></div>
+      </div>
+
+      <div class="tool-card">
+        <h3>📁 Koleksi / Folder Resep</h3>
+        <p class="muted">Buat folder seperti Menu Harian, Menu Anak, Natal, Imlek, BBQ, Favorit Mama.</p>
+        <form id="collectionForm" class="inline-form">
+          <input id="collectionName" placeholder="Nama koleksi" required />
+          <button class="primary" type="submit">Tambah</button>
+        </form>
+        <div id="collectionList" class="list compact-list"></div>
+      </div>
+
+      <div class="tool-card">
+        <h3>🖨️ Print / PDF Resep</h3>
+        <p class="muted">Buka detail resep lalu tekan tombol Print. Dari jendela print browser bisa pilih “Save as PDF”.</p>
+        <button class="secondary wide" data-go="recipes" type="button">📖 Pilih Resep untuk Print</button>
+      </div>
+    </section>
+
     <section id="gallery" class="page">
       <h2>🖼️ Galeri Foto</h2>
       <div id="galleryGrid" class="gallery-grid"></div>
@@ -274,6 +315,7 @@
     <button data-go="add">➕<span>Tambah</span></button>
     <button data-go="plan">📅<span>Jadwal</span></button>
     <button data-go="master">📚<span>Bahan</span></button>
+    <button data-go="tools">🧰<span>Tools</span></button>
     <button data-go="gallery">🖼️<span>Galeri</span></button>
     <button data-go="history">🕒<span>Riwayat</span></button>
   </nav>

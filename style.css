@@ -75,7 +75,7 @@ label{display:block;margin:12px 0;font-weight:700;font-size:14px}
 .actions{display:flex;gap:8px;margin-top:12px}
 
 /* Bottom nav */
-.bottomnav{position:fixed;bottom:0;left:0;right:0;background:var(--paper-card);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(7,1fr);padding:8px 2px;padding-bottom:max(8px, env(safe-area-inset-bottom));z-index:50}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;background:var(--paper-card);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(8,1fr);padding:8px 2px;padding-bottom:max(8px, env(safe-area-inset-bottom));z-index:50}
 .bottomnav button{background:transparent;border:0;color:var(--ink-soft);font-size:17px;padding:6px 2px;border-radius:8px;transition:color .15s;box-shadow:none}
 .bottomnav button.active{color:var(--chili)}
 .bottomnav span{display:block;font-size:8.5px;margin-top:3px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
@@ -116,7 +116,7 @@ label{display:block;margin:12px 0;font-weight:700;font-size:14px}
 .tags{display:flex;gap:8px;flex-wrap:wrap}
 .tag-pill{background:var(--paper-card);border:1px solid var(--border);border-radius:999px;padding:6px 11px;font-weight:700;color:var(--ink);font-size:13px}
 .note-box{white-space:pre-wrap;background:var(--paper-card);border:1px solid var(--border);border-radius:6px;padding:12px;color:var(--ink)!important}
-.detail-actions{display:grid;grid-template-columns:1fr 1fr;margin-top:16px}
+.detail-actions{display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:16px;gap:8px}
 .source-badge{display:inline-block;margin-bottom:8px}
 
 /* Ingredients detail */
@@ -282,3 +282,31 @@ button.secondary:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(120,90
 
 .mini-label{display:block;margin:10px 0 12px;font-size:.85rem;color:var(--muted);font-weight:700}
 .mini-label select{margin-top:6px}
+
+
+/* ========== v2.1.0: Tools, Backup, Koleksi, Print ========== */
+.tool-card{background:var(--paper-card);border:1px solid var(--border);border-radius:6px;padding:16px;margin:14px 0;box-shadow:2px 3px 0 var(--border)}
+.tool-card h3{margin:0 0 8px;font-size:17px}
+.collection-control{background:var(--paper-card);border:1px solid var(--border);border-radius:6px;padding:12px;margin:12px 0;display:grid;gap:8px}
+.collection-control b{font-size:13px;color:var(--ink-soft)}
+.collection-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.tag-pill.mini{font-size:11px;padding:4px 8px}
+.collection-card{display:block!important}
+.collection-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.collection-head h3{margin:0 0 4px}
+.collection-recipe-list{margin-top:10px;border-top:1px dashed var(--border);padding-top:8px}
+.collection-recipe-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-bottom:1px dashed var(--border);padding:8px 0}
+.collection-recipe-row:last-child{border-bottom:0}
+.collection-recipe-row span{font-weight:700;cursor:pointer}
+.collection-recipe-row span:hover{color:var(--chili)}
+@media(max-width:430px){
+  .bottomnav span{font-size:7px}
+  .bottomnav button{font-size:15px;padding-left:0;padding-right:0}
+}
+@media print{
+  .topbar,.bottomnav,.install-banner,.detail-actions,.detail-share-btn,.share-btn,.card-actions{display:none!important}
+  body{background:#fff;color:#111;padding:0}
+  main{padding:0 18px}
+  .page{display:none!important}.page.active{display:block!important}
+  .detail-card,.detail-box{box-shadow:none;border:0}
+}
