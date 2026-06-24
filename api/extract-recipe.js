@@ -85,12 +85,23 @@ async function fetchYouTubeTranscript(videoUrl) {
   if (!videoId) throw new Error('Link YouTube tidak valid.');
 
   const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36' }
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+      // Bypass EU/regional consent redirect page that lacks captionTracks
+      'Cookie': 'CONSENT=YES+1'
+    }
   });
-  const html = await pageResp.text();
 
+  if (pageResp.status === 429 || pageResp.status === 403) {
+    throw new Error('YouTube menolak akses server (rate limit). Ini masalah dari sisi YouTube, bukan video Anda. Solusi: buka video di YouTube → klik "...Selengkapnya" di bawah judul → "Tampilkan transcript" → copy teksnya → paste di tab "TikTok/Teks".');
+  }
+
+  const html = await pageResp.text();
   const match = html.match(/"captionTracks":(\[.*?\])/);
-  if (!match) throw new Error('Video ini tidak memiliki transcript/caption. Coba paste manual deskripsi atau langkahnya.');
+  if (!match) {
+    throw new Error('Gagal membaca caption video (kemungkinan diblokir YouTube, bukan berarti video tidak punya transcript). Solusi: buka video di YouTube → klik "...Selengkapnya" di bawah judul → "Tampilkan transcript" → copy teksnya → paste di tab "TikTok/Teks".');
+  }
 
   let tracks;
   try {
@@ -128,15 +139,16 @@ export default async function handler(req, res) {
     let model;
 
     if (mode === 'photo') {
-      if (!imageBase64) throw new Error('Foto tidak ditemukan.');
+      const images = Array.isArray(req.body?.imagesBase64) ? req.body.imagesBase64 : (imageBase64 ? [imageBase64] : []);
+      if (!images.length) throw new Error('Foto tidak ditemukan.');
       model = 'qwen3-vl-plus';
       messages = [
         { role: 'system', content: RECIPE_SCHEMA_PROMPT },
         {
           role: 'user',
           content: [
-            { type: 'text', text: 'Ini adalah foto resep masakan (bisa tulisan tangan, cetak, atau foto hidangan). Ekstrak resepnya menjadi JSON sesuai skema.' },
-            { type: 'image_url', image_url: { url: imageBase64 } }
+            { type: 'text', text: `Berikut ${images.length} foto resep masakan (bisa tulisan tangan, cetak, atau foto hidangan dari beberapa angle/halaman). Gabungkan informasi dari semua foto menjadi satu resep utuh dalam JSON sesuai skema.` },
+            ...images.map(img => ({ type: 'image_url', image_url: { url: img } }))
           ]
         }
       ];
