@@ -1,11 +1,11 @@
 {
   "name": "Resep Keluarga Yonarta",
-  "short_name": "Resep Yonarta",
-  "description": "Kumpulan resep keluarga Yonarta dengan AI menu generator fleksibel & daftar belanja otomatis",
+  "short_name": "Resep Keluarga",
+  "description": "Simpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fff7ed",
-  "theme_color": "#f59e0b",
+  "background_color": "#F7EFE0",
+  "theme_color": "#C0392B",
   "orientation": "portrait",
   "categories": ["food"],
   "icons": [

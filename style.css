@@ -440,3 +440,14 @@ body.is-admin .admin-only{display:block!important}
 .filter-subtitle{font-size:12px;font-weight:800;color:var(--ink-soft);margin:0 0 6px;text-transform:uppercase;letter-spacing:.035em}
 .collection-filter-chips{margin-top:0}
 .collection-chip.active{background:var(--chili);color:#fff;border-color:var(--chili)}
+
+/* v2.4.0: sentimental Resep Keluarga hero */
+.home-hero{background:linear-gradient(135deg,#FFFCF6,#FBEEDC);border:1px solid var(--border);border-radius:18px;padding:18px 16px;margin:8px 0 16px;box-shadow:3px 5px 0 var(--border);position:relative;overflow:hidden}
+.home-hero::after{content:'🍲';position:absolute;right:14px;top:8px;font-size:52px;opacity:.12;transform:rotate(-10deg)}
+.home-hero h2{font-size:26px;line-height:1.08;margin:8px 0 10px;letter-spacing:-.02em;color:var(--ink)}
+.home-hero p{margin:0 0 12px;color:var(--ink-soft);font-weight:600;line-height:1.55;font-size:14px}
+.story-box{background:linear-gradient(135deg,#FFFCF6,#FFF7ED);border-left:4px solid var(--chili);line-height:1.65}
+.detail-card > h3{margin-top:20px}
+.detail-box > .recipe-audit{margin:8px 4px 14px;padding:0 4px}
+.detail-box > .recipe-audit span{background:#FFFCF6}
+@media(min-width:760px){.home-hero h2{font-size:32px}.home-hero{padding:24px}}

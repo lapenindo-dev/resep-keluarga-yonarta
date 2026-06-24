@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.3.5</title>
+  <title>Resep Keluarga Yonarta v2.4.0</title>
   <meta name="theme-color" content="#f59e0b" />
-  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, koleksi resep, print resep, dan dashboard statistik." />
+  <meta name="description" content="Buku resep keluarga digital untuk menyimpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Resep Yonarta" />
+  <meta name="apple-mobile-web-app-title" content="Resep Keluarga" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,19 +20,19 @@
   <div id="authScreen" class="auth-screen">
     <div class="auth-card">
       <div class="auth-logo">🍳</div>
-      <p class="eyebrow">Resep Keluarga Yonarta</p>
-      <h2>Masuk Keluarga</h2>
-      <p class="muted">Aplikasi ini hanya untuk keluarga. Masuk memakai email dan password yang sudah dibuat di Supabase Auth.</p>
+      <p class="eyebrow">Buku Resep Keluarga</p>
+      <h2>Masuk ke Dapur Keluarga</h2>
+      <p class="muted">Simpan resep Mama, Oma, dan keluarga agar tidak hilang. Masuk memakai email dan password keluarga yang sudah dibuat di Supabase Auth.</p>
       <label>Email
         <input id="loginEmail" type="email" placeholder="nama@email.com" autocomplete="email" />
       </label>
       <label>Password
-        <input id="loginPassword" type="password" placeholder="Password akun keluarga" autocomplete="current-password" />
+        <input id="loginPassword" type="password" placeholder="Password dapur keluarga" autocomplete="current-password" />
       </label>
       <button id="loginPasswordBtn" class="primary wide" type="button">Masuk</button>
       <button id="loginBtn" class="secondary wide" type="button">Kirim Magic Link</button>
       <div id="authStatus" class="ai-status" style="display:none"></div>
-      <p class="hint">Paling aman: buat user keluarga dulu di Supabase Authentication → Users. Magic Link hanya berfungsi untuk email yang sudah terdaftar.</p>
+      <p class="hint">Paling aman: buat user keluarga dulu di Supabase Authentication → Users. Magic Link hanya berfungsi untuk email keluarga yang sudah terdaftar.</p>
     </div>
   </div>
   <!-- Install banner -->
@@ -48,7 +48,7 @@
     <div class="topbar-left">
       <button id="backBtn" class="icon-btn" title="Kembali" style="display:none">←</button>
       <div>
-        <p class="eyebrow">Resep Keluarga</p>
+        <p class="eyebrow">Buku Resep Keluarga</p>
         <h1>Yonarta</h1>
       </div>
     </div>
@@ -61,36 +61,41 @@
 
   <main>
     <section id="home" class="page active">
-      <div class="stats">
-        <div class="card"><b id="totalResep">0</b><span>Total Resep</span></div>
-        <div class="card"><b id="totalFavorit">0</b><span>Favorit</span></div>
+      <div class="home-hero">
+        <p class="eyebrow">Resep Keluarga</p>
+        <h2>Simpan resep Mama hari ini, sebelum hanya tersisa kenangan.</h2>
+        <p>Resep keluarga sering hilang karena tidak pernah ditulis. Simpan resep Mama, Oma, dan keluarga dalam satu buku resep digital yang bisa diwariskan ke anak cucu.</p>
+        <button class="primary wide" data-go="add">+ Simpan Resep Keluarga</button>
       </div>
-      <button class="primary wide" data-go="add">+ Tambah Resep</button>
-      <button id="shareAppHomeBtn" class="secondary wide" type="button">📤 Share Aplikasi ke Keluarga</button>
-      <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
-      <button class="secondary wide" data-go="tools">📁 Koleksi / Print</button>
-      <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Apa Hari Ini?</button></div>
+      <div class="stats">
+        <div class="card"><b id="totalResep">0</b><span>Resep Keluarga Tersimpan</span></div>
+        <div class="card"><b id="totalFavorit">0</b><span>Favorit Rumah</span></div>
+      </div>
+      <button id="shareAppHomeBtn" class="secondary wide" type="button">📤 Bagikan ke Keluarga</button>
+      <button class="secondary wide" data-go="recipes">🔍 Cari Resep Keluarga</button>
+      <button class="secondary wide" data-go="tools">📁 Warisan Keluarga / Print</button>
+      <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Kenangan Apa Hari Ini?</button></div>
       <div id="randomResult"></div>
-      <h2>📊 Dashboard Keluarga</h2>
+      <h2>❤️ Kenangan Keluarga</h2>
       <div class="stats dashboard-stats">
         <button class="card stat-link" type="button" onclick="openDashboardMetric('rating5')"><b id="dash5star">0</b><span>Rating 5⭐</span></button>
-        <button class="card stat-link" type="button" onclick="openDashboardMetric('cooked')"><b id="dashTotalCooked">0</b><span>Total Kali Masak</span></button>
-        <button class="card stat-link" type="button" onclick="openDashboardMetric('jenis')"><b id="dashJenisTerbanyak">-</b><span>Jenis Terbanyak</span></button>
-        <button class="card stat-link" type="button" onclick="openDashboardMetric('sumber')"><b id="dashSumberTerbanyak">-</b><span>Sumber Terbanyak</span></button>
+        <button class="card stat-link" type="button" onclick="openDashboardMetric('cooked')"><b id="dashTotalCooked">0</b><span>Total Kali Dimasak</span></button>
+        <button class="card stat-link" type="button" onclick="openDashboardMetric('jenis')"><b id="dashJenisTerbanyak">-</b><span>Jenis Favorit</span></button>
+        <button class="card stat-link" type="button" onclick="openDashboardMetric('sumber')"><b id="dashSumberTerbanyak">-</b><span>Asal Terbanyak</span></button>
       </div>
-      <p class="muted mini-note dashboard-hint">Tap angka dashboard untuk melihat resep terkait.</p>
+      <p class="muted mini-note dashboard-hint">Tap angka untuk melihat resep keluarga terkait.</p>
       <div class="stat-block">
-        <h4>🏆 Resep Paling Sering Dimasak</h4>
+        <h4>🏆 Resep yang Paling Sering Pulang ke Meja</h4>
         <div id="topCookedList" class="top-cooked-list"></div>
       </div>
-      <h2 id="latestTitle">Daftar Resep</h2>
-      <p class="muted mini-note">Semua resep ditampilkan di sini supaya jumlahnya sesuai dengan Total Resep.</p>
+      <h2 id="latestTitle">Resep Keluarga Tersimpan</h2>
+      <p class="muted mini-note">Setiap resep adalah bagian kecil dari cerita rumah.</p>
       <div id="latestList" class="list"></div>
     </section>
 
     <section id="recipes" class="page">
       <div class="search-row">
-        <input id="searchInput" class="search" placeholder="Cari resep, bahan, siapa masak..." />
+        <input id="searchInput" class="search" placeholder="Cari resep Mama, bahan, kenangan..." />
         <button id="voiceSearchBtn" class="mic-btn" type="button" title="Cari dengan suara" style="display:none">🎤</button>
       </div>
       <div class="chips">
@@ -107,33 +112,33 @@
         <button class="chip" data-filter="Kreasi sendiri">✨ Kreasi sendiri</button>
       </div>
       <div class="collection-filter-row">
-        <div class="filter-subtitle">📁 Koleksi</div>
+        <div class="filter-subtitle">📁 Warisan Keluarga</div>
         <div id="collectionFilterChips" class="chips collection-filter-chips"></div>
       </div>
       <div id="recipeList" class="list"></div>
     </section>
 
     <section id="add" class="page">
-      <div id="formModeBanner" class="page-mode-banner add-mode"><span>➕ Mode Tambah Resep</span><small>Isi data resep baru lalu tekan Simpan.</small></div>
-      <h2 id="formTitle">Tambah Resep</h2>
+      <div id="formModeBanner" class="page-mode-banner add-mode"><span>➕ Simpan Resep Keluarga</span><small>Catat resep hari ini supaya tetap hidup untuk anak cucu.</small></div>
+      <h2 id="formTitle">Simpan Resep Keluarga</h2>
 
       <form id="recipeForm">
         <input type="hidden" id="recipeId" />
         <div class="form-top-actions">
-          <button class="primary wide top-save-btn" type="submit">💾 Simpan Resep</button>
-          <small class="hint">Tombol simpan juga tersedia di bagian bawah form.</small>
+          <button class="primary wide top-save-btn" type="submit">💾 Simpan Resep Keluarga</button>
+          <small class="hint">Tulis seperti menyimpan cerita rumah, bukan hanya langkah masak.</small>
         </div>
-        <label class="hero-photo-field">Foto Utama <small class="hint">Foto utama untuk kartu resep dan halaman detail. Opsional.</small>
+        <label class="hero-photo-field">Foto Utama <small class="hint">Foto utama untuk kartu resep dan halaman detail. Bisa foto masakan, catatan lama, atau momen keluarga.</small>
           <input id="foto_file" type="file" accept="image/*" />
           <img id="foto_preview" class="photo-preview" alt="Preview" style="display:none" />
         </label>
-        <label class="extra-photo-field">Foto Tambahan <small class="hint">Boleh pilih beberapa foto sekaligus: catatan resep, screenshot, bahan, proses masak, atau foto pendukung.</small>
+        <label class="extra-photo-field">Foto Tambahan <small class="hint">Boleh pilih foto catatan resep, tulisan tangan Mama/Oma, bahan, proses masak, atau foto kenangan.</small>
           <input id="foto_files_extra" type="file" accept="image/*" multiple />
           <div id="extraPhotosPreview" class="extra-photos-preview responsive-extra-grid"></div>
         </label>
       <div class="ai-extract-box">
         <div class="section-title-row">
-          <h3>✨ Input Resep</h3>
+          <h3>✨ Input Resep Keluarga</h3>
         </div>
         <div class="ai-tabs input-recipe-tabs">
           <button class="ai-tab active" data-aitab="manual" type="button">✍️ Input Manual</button>
@@ -141,24 +146,24 @@
         </div>
 
         <div class="ai-panel active" data-aipanel="manual">
-          <p class="hint">Isi form resep secara manual. Gunakan cara ini kalau resep sudah diketahui dan ingin diketik sendiri.</p>
-          <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">✍️ Mulai Isi Manual</button>
+          <p class="hint">Isi resep secara manual. Cocok untuk resep keluarga yang sudah diingat atau ingin ditulis pelan-pelan.</p>
+          <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">✍️ Mulai Menyimpan Resep</button>
         </div>
 
         <div class="ai-panel" data-aipanel="photo-caption">
-          <p class="hint">Gunakan foto catatan/screenshot resep atau paste caption/transcript manual. Sistem tidak mengambil YouTube otomatis.</p>
+          <p class="hint">Gunakan foto catatan lama, screenshot resep, atau paste catatan keluarga. Sistem tidak mengambil YouTube otomatis.</p>
 
           <div class="input-method-card">
             <h4>📷 Dari Foto</h4>
-            <p class="hint">Upload foto resep, catatan, screenshot, atau foto bahan. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
+            <p class="hint">Upload foto resep, catatan tulisan tangan, screenshot, atau foto bahan. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
             <input id="aiPhotoInput" type="file" accept="image/*" multiple />
             <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
-            <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Ekstrak dari Foto</button>
+            <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Rapikan dari Foto Kenangan</button>
           </div>
 
           <div class="input-method-card">
-            <p class="hint">Paste caption TikTok/Instagram, transcript YouTube yang dicopy manual, atau catatan resep keluarga.</p>
-            <label class="mini-label">Simpan sebagai sumber
+            <p class="hint">Paste caption TikTok/Instagram, transcript YouTube yang dicopy manual, atau catatan resep keluarga dari Mama/Oma.</p>
+            <label class="mini-label">Simpan sebagai asal resep
               <select id="aiTextSource">
                 <option value="Internet">Internet</option>
                 <option value="Warisan">Warisan</option>
@@ -170,15 +175,15 @@
             <textarea id="aiTextInput" placeholder="Contoh:
 Bahan: 500gr ayam, 3 siung bawang putih, 2 sdm kecap.
 Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
-            <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan dari Caption / Teks</button>
+            <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan Jadi Resep Keluarga</button>
           </div>
         </div>
 
         <div id="aiExtractStatus" class="ai-status" style="display:none"></div>
       </div>
 
-        <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Samcan Crispy" /></label>
-        <label>Nama Penulis Resep <small class="hint">Diisi manual, contoh: Mama, Papa, Oma.</small>
+        <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Ayam Kecap Mama" /></label>
+        <label>Resep dari Siapa <small class="hint">Contoh: Mama, Papa, Oma, Nenek, atau nama anggota keluarga.</small>
           <input id="penulis_nama" placeholder="Contoh: Mama" />
         </label>
         <label>Bahan Utama
@@ -196,13 +201,13 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
             <option>Saus dan Bumbu</option><option>Minuman</option><option>Lainnya</option>
           </select>
         </label>
-        <label>Siapa yang Masak <small class="hint">Nama anggota keluarga</small>
+        <label>Siapa yang Biasanya Masak <small class="hint">Nama anggota keluarga yang paling sering membuat resep ini</small>
           <input id="dimasak_oleh" list="cookNameOptions" placeholder="Contoh: Mama, Papa, Yonarta" />
           <datalist id="cookNameOptions"></datalist>
         </label>
-        <label>Durasi Menit<input id="durasi_menit" type="number" placeholder="45" /></label>
+        <label>Durasi Masak<input id="durasi_menit" type="number" placeholder="45" /></label>
         <label>Porsi<input id="porsi" type="number" placeholder="4" /></label>
-        <label>Status
+        <label>Status Kenangan
           <select id="status">
             <option>Belum Dicoba</option><option>Sudah Dicoba</option>
             <option>Favorit Keluarga</option><option>Resep Andalan</option>
@@ -218,33 +223,33 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
         </label>
         <div class="ingredients-editor">
           <div class="section-title-row">
-            <h3>🧂 Bahan Terstruktur</h3>
+            <h3>🧂 Bahan Resep</h3>
             <button class="secondary small" type="button" id="addIngredientGroup">+ Grup</button>
           </div>
-          <p class="hint">Isi bahan per grup supaya daftar belanja bisa dihitung otomatis.</p>
+          <p class="hint">Isi bahan per grup supaya resep rapi dan daftar belanja bisa dihitung otomatis.</p>
           <datalist id="ingredientOptions"></datalist>
           <div id="ingredientGroups"></div>
         </div>
-        <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris"></textarea></label>
-        <label>Sumber Resep
-          <select id="sumber_resep"><option>Internet</option><option>Warisan</option><option>Keluarga</option><option>Teman</option><option>Kreasi sendiri</option></select>
+        <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris. Contoh: Tumis bawang sampai harum seperti cara Mama."></textarea></label>
+        <label>Asal Resep
+          <select id="sumber_resep"><option>Keluarga</option><option>Warisan</option><option>Internet</option><option>Teman</option><option>Kreasi sendiri</option></select>
         </label>
-        <label>Tag<input id="tag" placeholder="air fryer, cepat, hemat" /></label>
-        <label>Catatan Yonarta<textarea id="catatan_yonarta"></textarea></label>
-        <label>Link Sumber<input id="link_sumber" placeholder="Website / sosial media / sumber lain" /></label>
-        <button class="primary wide" type="submit">Simpan Resep</button>
+        <label>Label Kenangan<input id="tag" placeholder="Resep Mama, Menu Minggu, Favorit Anak, Lebaran" /></label>
+        <label>Cerita di Balik Resep<textarea id="catatan_yonarta" placeholder="Ceritakan kenangan di balik resep ini. Siapa yang pertama membuatnya? Biasanya dimasak saat apa? Apa yang membuat resep ini terasa seperti rumah?"></textarea></label>
+        <label>Link Sumber<input id="link_sumber" placeholder="Website / sosial media / sumber lain, jika ada" /></label>
+        <button class="primary wide" type="submit">Simpan Resep Keluarga</button>
         <button class="ghost wide" type="button" id="cancelEdit">Batal</button>
       </form>
     </section>
 
     <section id="detail" class="page detail-view-page">
       <button class="ghost" type="button" id="backToRecipes">← Kembali</button>
-      <div class="page-mode-banner view-mode"><span>👀 Mode Lihat Resep</span><small>Halaman ini hanya untuk melihat. Tekan Edit Resep jika ingin mengubah.</small></div>
+      <div class="page-mode-banner view-mode"><span>👀 Cerita Resep Keluarga</span><small>Lihat resep, asal, dan cerita di balik masakan ini.</small></div>
       <div id="recipeDetail" class="detail-box"></div>
     </section>
 
     <section id="plan" class="page">
-      <h2>📅 Jadwal Menu</h2>
+      <h2>📅 Jadwal Masakan Keluarga</h2>
       <p class="muted">Buat jadwal menu keluarga otomatis dengan AI untuk 1–7 hari. Slot tetap Siang dan Malam.</p>
       <div class="plan-controls">
         <label>Mulai dari Tanggal<input id="planStartDate" type="date" /></label>
@@ -304,8 +309,8 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
 
 
     <section id="tools" class="page">
-      <h2>📁 Koleksi / Print</h2>
-      <p class="muted">Area sederhana untuk mengatur koleksi resep dan print resep. Backup JSON disembunyikan dari user keluarga.</p>
+      <h2>📁 Warisan Keluarga / Print</h2>
+      <p class="muted">Atur koleksi resep keluarga dan cetak resep menjadi PDF supaya mudah dibagikan atau disimpan.</p>
 
       <div class="tool-card admin-only" data-admin-only="backup">
         <h3>💾 Backup Data Admin</h3>
@@ -319,29 +324,29 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
       </div>
 
       <div class="tool-card">
-        <h3>📁 Koleksi / Folder Resep</h3>
-        <p class="muted">Buat folder seperti Menu Harian, Menu Anak, Natal, Imlek, BBQ, Favorit Mama.</p>
+        <h3>📁 Koleksi Warisan Keluarga</h3>
+        <p class="muted">Buat folder seperti Resep Mama, Resep Oma, Menu Harian, Menu Anak, Hari Raya, Favorit Rumah.</p>
         <form id="collectionForm" class="inline-form">
-          <input id="collectionName" placeholder="Nama koleksi" required />
+          <input id="collectionName" placeholder="Contoh: Resep Mama" required />
           <button class="primary" type="submit">Tambah</button>
         </form>
         <div id="collectionList" class="list compact-list"></div>
       </div>
 
       <div class="tool-card">
-        <h3>🖨️ Print / PDF Resep</h3>
+        <h3>🖨️ Print / PDF Buku Resep</h3>
         <p class="muted">Buka detail resep lalu tekan tombol Print. Dari jendela print browser bisa pilih “Save as PDF”.</p>
-        <button class="secondary wide" data-go="recipes" type="button">📖 Pilih Resep untuk Print</button>
+        <button class="secondary wide" data-go="recipes" type="button">📖 Pilih Resep Keluarga untuk Print</button>
       </div>
     </section>
 
     <section id="gallery" class="page">
-      <h2>🖼️ Galeri Foto</h2>
+      <h2>🖼️ Galeri Kenangan Masakan</h2>
       <div id="galleryGrid" class="gallery-grid"></div>
     </section>
 
     <section id="history" class="page">
-      <h2>🕒 Riwayat</h2>
+      <h2>🕒 Terakhir Dilihat</h2>
       <div id="historyList" class="list"></div>
     </section>
   </main>
@@ -367,13 +372,13 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
     <button data-go="add">➕<span>Tambah</span></button>
     <button data-go="plan">📅<span>Jadwal</span></button>
     <button data-go="master">📚<span>Bahan</span></button>
-    <button data-go="tools">📁<span>Koleksi</span></button>
+    <button data-go="tools">📁<span>Warisan</span></button>
     <button data-go="gallery">🖼️<span>Galeri</span></button>
     <button data-go="history">🕒<span>Riwayat</span></button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=2.2.8"></script>
+  <script src="app.js?v=2.4.0"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
