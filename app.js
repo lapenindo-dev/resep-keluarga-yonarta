@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.3.3
+   Resep Keluarga Yonarta v2.3.5
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
@@ -14,7 +14,7 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
 // v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
 // v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
-// v2.3.3: Beranda menampilkan maksimal 8 resep terbaru agar loading awal ringan.
+// v2.3.5: Card foto kembali square 16:16 dan filter koleksi ditambahkan di halaman resep.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -34,6 +34,7 @@ let masterIngredients = [];
 let masterUnits = [];
 let cookLog = [];
 let activeFilter = '';
+let activeCollectionFilter = '';
 let ingredientGroupsState = [];
 let extraPhotosState = []; // urls for current form (existing + newly uploaded)
 let mealPlan = [];
@@ -403,7 +404,7 @@ async function loadAll(){
 function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
-  renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
+  renderCollectionFilterChips(); renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
   renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory(); renderMealPlan(); renderCollections();
 }
 
@@ -424,7 +425,7 @@ const RECIPE_SOURCES = ['Internet','Warisan','Keluarga','Teman','Kreasi sendiri'
 function normalizeRecipeSource(src){
   const value = String(src || '').trim();
   if(RECIPE_SOURCES.includes(value)) return value;
-  // Kompatibilitas data lama sebelum v2.3.3
+  // Kompatibilitas data lama sebelum v2.3.5
   if(value === 'YouTube' || value === 'AI') return 'Internet';
   if(value === 'Manual') return 'Kreasi sendiri';
   return value || 'Kreasi sendiri';
@@ -754,14 +755,39 @@ function renderLatest(){
 function renderRecipes(){
   const q = ($('searchInput').value || '').toLowerCase();
   const filtered = recipes.filter(r => {
-    const hay = (JSON.stringify(r) + ' ' + flatIngredients(r.bahan).join(' ')).toLowerCase();
+    const hay = (JSON.stringify(r) + ' ' + flatIngredients(r.bahan).join(' ') + ' rating_keluarga ' + (r.rating_keluarga || '') + ' sumber_resep ' + normalizeRecipeSource(r.sumber_resep)).toLowerCase();
     const okSearch = !q || hay.includes(q);
     const sourceFilters=RECIPE_SOURCES;
     const okFilter = !activeFilter || (sourceFilters.includes(activeFilter) ? normalizeRecipeSource(r.sumber_resep)===activeFilter : r.bahan_utama===activeFilter);
-    return okSearch && okFilter;
+    const okCollection = !activeCollectionFilter || ((recipeCollections[activeCollectionFilter] || []).includes(r.id));
+    return okSearch && okFilter && okCollection;
   });
   $('recipeList').innerHTML = filtered.map(recipeCard).join('') || '<p class="muted">Tidak ada resep.</p>';
 }
+
+function renderCollectionFilterChips(){
+  const el = $('collectionFilterChips');
+  if(!el) return;
+  const names = Object.keys(recipeCollections).filter(name => Array.isArray(recipeCollections[name])).sort((a,b)=>a.localeCompare(b));
+  if(!names.length){
+    el.innerHTML = '<span class="muted mini-note">Belum ada koleksi.</span>';
+    activeCollectionFilter = '';
+    return;
+  }
+  if(activeCollectionFilter && !names.includes(activeCollectionFilter)) activeCollectionFilter = '';
+  const allActive = activeCollectionFilter ? '' : ' active';
+  el.innerHTML = `<button type="button" class="chip collection-chip${allActive}" onclick="setCollectionFilter('')">Semua Koleksi</button>` + names.map(name => {
+    const active = activeCollectionFilter === name ? ' active' : '';
+    const count = (recipeCollections[name] || []).length;
+    return `<button type="button" class="chip collection-chip${active}" onclick="setCollectionFilter(decodeURIComponent('${encodeURIComponent(name)}'))">📁 ${escapeHtml(name)} ${count}</button>`;
+  }).join('');
+}
+
+window.setCollectionFilter = (name='') => {
+  activeCollectionFilter = name || '';
+  renderCollectionFilterChips();
+  renderRecipes();
+};
 
 /* ---------- Ingredient editor ---------- */
 
@@ -1572,14 +1598,53 @@ function mostCommonValue(list, fallback='-'){
   return top ? `${top[0]} (${top[1]})` : fallback;
 }
 
+
+function mostCommonRaw(list){
+  const counts = {};
+  list.filter(Boolean).forEach(v => { counts[v] = (counts[v]||0) + 1; });
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  return top ? top[0] : '';
+}
+
+function setRecipeListFilter({ search='', filter='' } = {}){
+  const input = $('searchInput');
+  if(input) input.value = search || '';
+  activeFilter = filter || '';
+  activeCollectionFilter = '';
+  document.querySelectorAll('.chip[data-filter]').forEach(chip => chip.classList.toggle('active', (chip.dataset.filter || '') === activeFilter));
+  renderCollectionFilterChips();
+  renderRecipes();
+  go('recipes');
+}
+
+window.openDashboardMetric = (type) => {
+  if(type === 'rating5'){
+    setRecipeListFilter({ search: 'rating_keluarga 5' });
+    return;
+  }
+  if(type === 'cooked'){
+    go('history');
+    return;
+  }
+  if(type === 'jenis'){
+    const topJenis = mostCommonRaw(recipes.map(r=>r.jenis_hidangan));
+    if(topJenis) setRecipeListFilter({ search: topJenis });
+    else go('recipes');
+    return;
+  }
+  if(type === 'sumber'){
+    const topSource = mostCommonRaw(recipes.map(r=>normalizeRecipeSource(r.sumber_resep)));
+    if(topSource) setRecipeListFilter({ filter: topSource });
+    else go('recipes');
+  }
+};
+
 function renderDashboard(){
   if($('dash5star')) $('dash5star').textContent = recipes.filter(r=>Number(r.rating_keluarga)===5).length;
   if($('dashTotalCooked')) $('dashTotalCooked').textContent = cookLog.length;
   if($('dashJenisTerbanyak')) $('dashJenisTerbanyak').textContent = mostCommonValue(recipes.map(r=>r.jenis_hidangan));
   if($('dashSumberTerbanyak')) $('dashSumberTerbanyak').textContent = mostCommonValue(recipes.map(r=>normalizeRecipeSource(r.sumber_resep)));
-  renderCollectionStats();
   renderTopCooked();
-  renderWeeklyChart();
 }
 
 function renderCollectionStats(){
@@ -1860,7 +1925,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Catatan</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.3.3</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.3.5</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -1945,8 +2010,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Search & filter
   $('searchInput').addEventListener('input', renderRecipes);
-  document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click', ()=>{
-    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.chip[data-filter]').forEach(c=>c.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip[data-filter]').forEach(x=>x.classList.remove('active'));
     c.classList.add('active');
     activeFilter=c.dataset.filter;
     renderRecipes();
@@ -2047,5 +2112,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.3.3 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.3.5 loaded');
 });

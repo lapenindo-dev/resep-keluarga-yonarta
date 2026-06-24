@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.3.3</title>
+  <title>Resep Keluarga Yonarta v2.3.5</title>
   <meta name="theme-color" content="#f59e0b" />
   <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email/password, share aplikasi, meal planner, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -73,22 +73,15 @@
       <div id="randomResult"></div>
       <h2>📊 Dashboard Keluarga</h2>
       <div class="stats dashboard-stats">
-        <div class="card"><b id="dash5star">0</b><span>Rating 5⭐</span></div>
-        <div class="card"><b id="dashTotalCooked">0</b><span>Total Kali Masak</span></div>
-        <div class="card"><b id="dashJenisTerbanyak">-</b><span>Jenis Terbanyak</span></div>
-        <div class="card"><b id="dashSumberTerbanyak">-</b><span>Sumber Terbanyak</span></div>
+        <button class="card stat-link" type="button" onclick="openDashboardMetric('rating5')"><b id="dash5star">0</b><span>Rating 5⭐</span></button>
+        <button class="card stat-link" type="button" onclick="openDashboardMetric('cooked')"><b id="dashTotalCooked">0</b><span>Total Kali Masak</span></button>
+        <button class="card stat-link" type="button" onclick="openDashboardMetric('jenis')"><b id="dashJenisTerbanyak">-</b><span>Jenis Terbanyak</span></button>
+        <button class="card stat-link" type="button" onclick="openDashboardMetric('sumber')"><b id="dashSumberTerbanyak">-</b><span>Sumber Terbanyak</span></button>
       </div>
+      <p class="muted mini-note dashboard-hint">Tap angka dashboard untuk melihat resep terkait.</p>
       <div class="stat-block">
         <h4>🏆 Resep Paling Sering Dimasak</h4>
         <div id="topCookedList" class="top-cooked-list"></div>
-      </div>
-      <div class="stat-block">
-        <h4>📊 Ringkasan Koleksi</h4>
-        <div id="collectionStats" class="collection-stats"></div>
-      </div>
-      <div class="stat-block">
-        <h4>📅 Aktivitas 7 Hari Terakhir</h4>
-        <div id="weeklyChart" class="weekly-chart"></div>
       </div>
       <h2 id="latestTitle">Daftar Resep</h2>
       <p class="muted mini-note">Semua resep ditampilkan di sini supaya jumlahnya sesuai dengan Total Resep.</p>
@@ -112,6 +105,10 @@
         <button class="chip" data-filter="Keluarga">👨‍👩‍👧‍👦 Keluarga</button>
         <button class="chip" data-filter="Teman">🤝 Teman</button>
         <button class="chip" data-filter="Kreasi sendiri">✨ Kreasi sendiri</button>
+      </div>
+      <div class="collection-filter-row">
+        <div class="filter-subtitle">📁 Koleksi</div>
+        <div id="collectionFilterChips" class="chips collection-filter-chips"></div>
       </div>
       <div id="recipeList" class="list"></div>
     </section>
