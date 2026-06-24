@@ -1,5 +1,6 @@
 /* =====================================================
-   Resep Keluarga Yonarta v1.1.0
+   Resep Keluarga Yonarta v1.4.0 — AI Extract (Qwen):
+   Foto, YouTube Transcript, TikTok/Teks Manual
    ===================================================== */
 const SUPABASE_URL = 'https://eswokjdhyktikcxranpo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_pV3wADDW91aY_0fbOSS39g_cUt39Cnu';
@@ -11,8 +12,10 @@ const PHOTO_BUCKET = 'recipe-photos';
 let recipes = [];
 let masterIngredients = [];
 let masterUnits = [];
+let cookLog = [];
 let activeFilter = '';
 let ingredientGroupsState = [];
+let extraPhotosState = []; // urls for current form (existing + newly uploaded)
 let mealPlan = [];
 let recipeHistory = [];
 try { recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]'); } catch(e){}
@@ -81,6 +84,21 @@ function setPhotoPreview(url){
   else { img.removeAttribute('src'); img.style.display = 'none'; }
 }
 
+function renderExtraPhotosPreview(){
+  const el = $('extraPhotosPreview');
+  if(!el) return;
+  el.innerHTML = extraPhotosState.map((url, i) => `
+    <div class="extra-thumb">
+      <img src="${url}" alt="Foto tambahan ${i+1}" />
+      <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
+    </div>`).join('');
+}
+
+window.removeExtraPhoto = (i) => {
+  extraPhotosState.splice(i, 1);
+  renderExtraPhotosPreview();
+};
+
 /* ---------- Navigation ---------- */
 
 function go(page){
@@ -103,6 +121,11 @@ async function loadAll(){
   const mu = await db.from('master_units').select('*').order('nama_satuan',{ascending:true});
   masterUnits = mu.error ? DEFAULT_UNITS.map(x=>({nama_satuan:x})) : (mu.data || []);
   if(!masterUnits.length) masterUnits = DEFAULT_UNITS.map(x=>({nama_satuan:x}));
+
+  const cl = await db.from('cook_log').select('*').order('cooked_at',{ascending:false});
+  cookLog = cl.error ? [] : (cl.data || []);
+  if(cl.error) console.warn('cook_log belum tersedia (jalankan migrasi SQL):', cl.error.message);
+
   render();
 }
 
@@ -112,17 +135,84 @@ function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
   renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
-  renderDashboard(); renderGallery(); renderHistory();
+  renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory();
+}
+
+function renderCookNameOptions(){
+  const names = [...new Set(recipes.map(r=>r.dimasak_oleh).filter(Boolean))];
+  const el = $('cookNameOptions');
+  if(el) el.innerHTML = names.map(n=>`<option value="${escapeHtml(n)}"></option>`).join('');
 }
 
 /* ---------- Recipe card ---------- */
 
-function recipeCard(r){
-  const bahan = flatIngredients(r.bahan).slice(0,3).join(', ');
-  const sourceBadge = r.sumber_resep ? `<span class="tag-pill source-badge">${r.sumber_resep==='YouTube'?'📺':r.sumber_resep==='AI'?'🤖':'✍️'} ${r.sumber_resep}</span>`:'';
-  const photo = r.foto_url ? `<img class="recipe-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" loading="lazy" />` : '';
-  return `<div class="item clickable-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0">${photo}<h3>${escapeHtml(r.nama_resep)}</h3>${sourceBadge}<p>${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')} · ${escapeHtml(r.status || '-')}</p><p>${stars(r.rating_keluarga)}</p><p>${escapeHtml(bahan)}</p><div class="actions" onclick="event.stopPropagation()"><button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button><button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button></div></div>`;
+function isFavoriteRecipe(r){
+  return ['Favorit Keluarga','Resep Andalan'].includes(r.status) || Number(r.rating_keluarga) === 5;
 }
+
+function sourceIcon(src){
+  return src === 'YouTube' ? '📺' : src === 'AI' ? '🤖' : '✍️';
+}
+
+function recipeCard(r){
+  const ribbon = isFavoriteRecipe(r) ? '<div class="ribbon" title="Favorit Keluarga"></div>' : '';
+  const photoStyle = r.foto_url ? `<img src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" loading="lazy" />` : '';
+  return `<div class="recipe-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}");}'>
+    <div class="recipe-photo-wrap">
+      ${ribbon}
+      <button class="share-btn" onclick='event.stopPropagation();shareRecipe("${r.id}")' title="Bagikan resep">📤</button>
+      ${photoStyle}
+      <span class="source-stamp">${sourceIcon(r.sumber_resep)} ${escapeHtml(r.sumber_resep || 'Manual')}</span>
+    </div>
+    <div class="recipe-info">
+      <h3>${escapeHtml(r.nama_resep)}</h3>
+      <p class="recipe-meta">${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')}${r.durasi_menit ? ' · ' + escapeHtml(r.durasi_menit) + ' menit' : ''}</p>
+      ${r.dimasak_oleh ? `<p class="cook-by">👤 Dimasak oleh ${escapeHtml(r.dimasak_oleh)}</p>` : ''}
+      <div class="stars">${stars(r.rating_keluarga)}</div>
+      <div class="card-actions" onclick="event.stopPropagation()">
+        <button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button>
+        <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Share recipe ---------- */
+
+function buildRecipeShareText(r){
+  const bahan = flatIngredients(r.bahan);
+  let text = `🍳 ${r.nama_resep}\n`;
+  text += `${r.bahan_utama || ''}${r.jenis_hidangan ? ' · ' + r.jenis_hidangan : ''}${r.durasi_menit ? ' · ' + r.durasi_menit + ' menit' : ''}\n\n`;
+  if(bahan.length){
+    text += `Bahan:\n${bahan.map(b=>'• '+b).join('\n')}\n\n`;
+  }
+  if(Array.isArray(r.cara_memasak) && r.cara_memasak.length){
+    text += `Cara Memasak:\n${r.cara_memasak.map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\n`;
+  }
+  if(r.link_sumber) text += `Sumber: ${r.link_sumber}\n`;
+  text += '\n— Resep Keluarga Yonarta';
+  return text;
+}
+
+window.shareRecipe = async (id) => {
+  const r = recipes.find(x=>x.id===id);
+  if(!r) return;
+  const text = buildRecipeShareText(r);
+  if(navigator.share){
+    try {
+      await navigator.share({ title: r.nama_resep, text });
+      return;
+    } catch(e){ if(e.name === 'AbortError') return; }
+  }
+  // Fallback: copy to clipboard
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Resep disalin! Siap dibagikan ke WhatsApp atau lainnya.');
+  } catch(e){
+    const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+    window.open(url, '_blank');
+  }
+};
 
 /* ---------- Recipe detail ---------- */
 
@@ -132,19 +222,42 @@ window.viewRecipe = (id) => {
   recipeHistory = [id, ...recipeHistory.filter(x=>x!==id)].slice(0,10);
   try { localStorage.setItem('recipeHistory', JSON.stringify(recipeHistory)); } catch(e){}
 
-  const photo = r.foto_url ? `<img class="detail-photo" src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" />` : '';
+  const allPhotos = [r.foto_url, ...(Array.isArray(r.foto_urls) ? r.foto_urls : [])].filter(Boolean);
+  let photoBlock = '';
+  if(allPhotos.length){
+    photoBlock = `<div class="detail-photo-wrap">
+      <img id="detailMainPhoto" src="${allPhotos[0]}" alt="Foto ${escapeHtml(r.nama_resep)}" />
+      <button class="detail-share-btn" onclick='shareRecipe("${r.id}")' title="Bagikan resep">📤</button>
+    </div>`;
+    if(allPhotos.length > 1){
+      photoBlock += `<div class="photo-thumbs">${allPhotos.map((url,i)=>`<img src="${url}" class="thumb${i===0?' active':''}" onclick="document.getElementById('detailMainPhoto').src='${url}';this.parentElement.querySelectorAll('.thumb').forEach(t=>t.classList.remove('active'));this.classList.add('active')" />`).join('')}</div>`;
+    }
+  } else {
+    photoBlock = `<div class="actions" style="margin-top:0"><button class="secondary wide" onclick='shareRecipe("${r.id}")'>📤 Bagikan Resep</button></div>`;
+  }
+
+  const cookCount = cookLog.filter(c=>c.recipe_id===r.id).length;
+  const lastCooked = cookLog.filter(c=>c.recipe_id===r.id)[0];
+  const cookInfo = cookCount > 0
+    ? `<span class="cook-count-badge">🔥 Dimasak ${cookCount}x${lastCooked ? ' · terakhir ' + new Date(lastCooked.cooked_at).toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : ''}</span>`
+    : '<span class="muted">Belum pernah ditandai dimasak</span>';
+
   const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada tag</span>';
   $('recipeDetail').innerHTML = `
-    ${photo}
+    ${photoBlock}
     <div class="detail-card">
       <h2>${escapeHtml(r.nama_resep)}</h2>
       <p class="rating-line">${stars(r.rating_keluarga)}</p>
+      <div class="cook-track-row">
+        ${cookInfo}
+        <button class="primary small" onclick='markAsCooked("${r.id}")'>✅ Tandai Sudah Dimasak</button>
+      </div>
       <div class="meta-grid">
         <div><b>Bahan Utama</b><span>${escapeHtml(r.bahan_utama || '-')}</span></div>
         <div><b>Jenis Hidangan</b><span>${escapeHtml(r.jenis_hidangan || '-')}</span></div>
         <div><b>Durasi</b><span>${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : '-'}</span></div>
         <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
-        <div><b>Status</b><span>${escapeHtml(r.status || '-')}</span></div>
+        <div><b>Dimasak Oleh</b><span>${escapeHtml(r.dimasak_oleh || '-')}</span></div>
         <div><b>Sumber</b><span>${escapeHtml(r.sumber_resep || 'Manual')}</span></div>
         <div><b>Link</b><span>${r.link_sumber ? `<a href="${escapeHtml(r.link_sumber)}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
       </div>
@@ -164,6 +277,19 @@ window.viewRecipe = (id) => {
   go('detail');
   window.scrollTo({top:0, behavior:'smooth'});
   renderHistory();
+};
+
+window.markAsCooked = async (id) => {
+  if(!db) return;
+  const { error } = await db.from('cook_log').insert({ recipe_id: id });
+  if(error){
+    alert('Gagal menandai. Pastikan migrasi SQL cook_log sudah dijalankan.\n' + error.message);
+    return;
+  }
+  const cl = await db.from('cook_log').select('*').order('cooked_at',{ascending:false});
+  if(!cl.error) cookLog = cl.data || [];
+  renderDashboard();
+  viewRecipe(id);
 };
 
 /* ---------- Recipe list / search / filter ---------- */
@@ -239,6 +365,18 @@ async function handleRecipeSubmit(e){
   let uploadedPhotoUrl = null;
   const selectedPhoto = $('foto_file').files?.[0];
   try { if(selectedPhoto) uploadedPhotoUrl = await uploadRecipePhoto(selectedPhoto); } catch(err){ return alert(err.message); }
+
+  // Upload any newly selected extra photos
+  const extraFiles = Array.from($('foto_files_extra').files || []);
+  if(extraFiles.length){
+    try {
+      for(const f of extraFiles){
+        const url = await uploadRecipePhoto(f);
+        if(url) extraPhotosState.push(url);
+      }
+    } catch(err){ return alert(err.message); }
+  }
+
   const existing = id ? recipes.find(r=>r.id===id) : null;
   const payload = {
     nama_resep: $('nama_resep').value.trim(),
@@ -254,6 +392,8 @@ async function handleRecipeSubmit(e){
     catatan_yonarta: $('catatan_yonarta').value.trim(),
     link_sumber: $('link_sumber').value.trim(),
     foto_url: uploadedPhotoUrl || existing?.foto_url || null,
+    foto_urls: extraPhotosState,
+    dimasak_oleh: $('dimasak_oleh').value.trim(),
     sumber_resep: $('sumber_resep') ? $('sumber_resep').value : 'Manual'
   };
   const res = id ? await db.from('recipes').update(payload).eq('id', id) : await db.from('recipes').insert(payload);
@@ -264,13 +404,16 @@ async function handleRecipeSubmit(e){
 window.editRecipe = (id)=>{
   const r = recipes.find(x=>x.id===id); if(!r) return;
   $('formTitle').textContent='Edit Resep'; $('recipeId').value=r.id;
-  ['nama_resep','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','sumber_resep'].forEach(k=>$(k).value=r[k]||'');
+  ['nama_resep','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','sumber_resep','dimasak_oleh'].forEach(k=>$(k).value=r[k]||'');
   $('durasi_menit').value=r.durasi_menit||''; $('porsi').value=r.porsi||''; $('rating_keluarga').value=r.rating_keluarga||0;
   ingredientGroupsState = normalizeIngredientGroups(r.bahan);
   renderIngredientGroups();
   $('cara_memasak').value=(r.cara_memasak||[]).join('\n'); $('tag').value=(r.tag||[]).join(', ');
   setPhotoPreview(r.foto_url || null);
   $('foto_file').value = '';
+  $('foto_files_extra').value = '';
+  extraPhotosState = Array.isArray(r.foto_urls) ? [...r.foto_urls] : [];
+  renderExtraPhotosPreview();
   go('add');
   window.scrollTo({top:0, behavior:'smooth'});
 };
@@ -288,6 +431,8 @@ function resetForm(){
   $('formTitle').textContent='Tambah Resep';
   $('rating_keluarga').value=0;
   setPhotoPreview(null);
+  extraPhotosState = [];
+  renderExtraPhotosPreview();
   ingredientGroupsState = [{ nama_grup:'Bahan Utama', items:[{nama_bahan:'', jumlah:'', satuan:''}] }];
   renderIngredientGroups();
 }
@@ -309,7 +454,13 @@ function pickRandom(pool, exclude=[]){
   return src[Math.floor(Math.random()*src.length)];
 }
 
+function formatPlanDate(dateObj){
+  return dateObj.toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
+}
+
 function generatePlan(){
+  const startVal = $('planStartDate').value;
+  const startDate = startVal ? new Date(startVal + 'T00:00:00') : new Date();
   const days = Math.min(Number($('jumlahHari').value || 7), 14);
   const meals = Math.min(Number($('menuPerHari').value || 2), 3);
   const pool = getFilteredPool();
@@ -318,7 +469,11 @@ function generatePlan(){
   const newPlan = [];
   const usedIds = [];
   for(let d=1; d<=days; d++){
-    const existingDay = mealPlan.find(x=>x.day===d);
+    const thisDate = new Date(startDate);
+    thisDate.setDate(startDate.getDate() + (d-1));
+    const dateKey = thisDate.toISOString().slice(0,10);
+    // preserve locked meals from existing plan with the SAME date (so changing start date doesn't carry over wrong locks)
+    const existingDay = mealPlan.find(x=>x.dateKey===dateKey);
     const dayMeals = [];
     for(let m=0; m<meals; m++){
       const existingMeal = existingDay?.meals?.[m];
@@ -331,7 +486,7 @@ function generatePlan(){
         usedIds.push(pick.id);
       }
     }
-    newPlan.push({ day: d, meals: dayMeals });
+    newPlan.push({ day: d, date: thisDate, dateKey, meals: dayMeals });
   }
   mealPlan = newPlan;
   renderMealPlan();
@@ -381,9 +536,10 @@ function renderMealPlan(){
 
   let html = '<div class="plan-grid">';
   mealPlan.forEach(d => {
+    const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
     html += `<div class="plan-day">
       <div class="plan-day-header">
-        <h3>Hari ${d.day}</h3>
+        <h3>${dateLabel}</h3>
         <button class="ghost small" onclick="randomizeDay(${d.day})" title="Acak semua menu hari ini">🔄</button>
       </div>`;
     d.meals.forEach((meal, mi) => {
@@ -482,7 +638,7 @@ function generateShoppingList(){
     html += '</ul></div>';
   });
   html += '<div class="shop-actions">';
-  html += '<button class="secondary wide" onclick="copyShoppingList()">📋 Copy Teks</button>';
+  html += '<button class="secondary wide" onclick="copyShoppingList(event)">📋 Copy Teks</button>';
   html += '<button class="primary wide" onclick="shareShoppingListWA()">💬 Kirim ke WhatsApp</button>';
   html += '</div>';
   html += '</div>';
@@ -516,9 +672,10 @@ function buildShoppingText(){
   items.forEach(it => { if(!byCategory[it.kategori]) byCategory[it.kategori]=[]; byCategory[it.kategori].push(it); });
 
   let text = `🛒 DAFTAR BELANJA\n${mealPlan.length} hari · ${mealPlan.reduce((s,d)=>s+d.meals.length,0)} menu\n\n`;
-  // add menu summary
+  // add menu summary with real dates
   mealPlan.forEach(d => {
-    text += `📅 Hari ${d.day}: `;
+    const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
+    text += `📅 ${dateLabel}: `;
     text += d.meals.map((m,i) => {
       const r = recipes.find(x=>x.id===m.recipeId);
       return `${MEAL_LABELS[i]||'Menu'} - ${r?r.nama_resep:'?'}`;
@@ -536,12 +693,15 @@ function buildShoppingText(){
   return text.trim();
 }
 
-window.copyShoppingList = () => {
+window.copyShoppingList = (evt) => {
   const text = buildShoppingText();
   navigator.clipboard.writeText(text).then(()=>{
-    const btn = event.target;
-    btn.textContent = '✅ Tersalin!';
-    setTimeout(()=>{ btn.textContent = '📋 Copy Teks'; }, 1500);
+    const btn = evt?.target;
+    if(btn){
+      const orig = btn.textContent;
+      btn.textContent = '✅ Tersalin!';
+      setTimeout(()=>{ btn.textContent = orig; }, 1500);
+    }
   }).catch(()=>alert('Gagal copy. Coba manual.'));
 };
 
@@ -551,7 +711,108 @@ window.shareShoppingListWA = () => {
   window.open(url, '_blank');
 };
 
-/* ========== MASTER BAHAN ========== */
+/* ========== AI RECIPE EXTRACTION (Qwen via Vercel Function) ========== */
+
+function setAiStatus(message, type){
+  const el = $('aiExtractStatus');
+  if(!el) return;
+  if(!message){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.className = `ai-status ${type||''}`;
+  el.textContent = message;
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function callExtractRecipeApi(payload){
+  const resp = await fetch('/api/extract-recipe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await resp.json();
+  if(!resp.ok) throw new Error(data.error || 'Gagal mengekstrak resep.');
+  return data.recipe;
+}
+
+function applyExtractedRecipe(recipe, sourceLabel){
+  if(!recipe) return;
+  if(recipe.nama_resep) $('nama_resep').value = recipe.nama_resep;
+  if(recipe.bahan_utama) $('bahan_utama').value = recipe.bahan_utama;
+  if(recipe.jenis_hidangan) $('jenis_hidangan').value = recipe.jenis_hidangan;
+  if(recipe.durasi_menit) $('durasi_menit').value = recipe.durasi_menit;
+  if(recipe.porsi) $('porsi').value = recipe.porsi;
+  if(Array.isArray(recipe.cara_memasak) && recipe.cara_memasak.length){
+    $('cara_memasak').value = recipe.cara_memasak.join('\n');
+  }
+  if(Array.isArray(recipe.tag) && recipe.tag.length){
+    $('tag').value = recipe.tag.join(', ');
+  }
+  if(Array.isArray(recipe.bahan) && recipe.bahan.length){
+    ingredientGroupsState = normalizeIngredientGroups(recipe.bahan);
+    renderIngredientGroups();
+  }
+  if(sourceLabel && $('sumber_resep')) $('sumber_resep').value = sourceLabel;
+  setAiStatus('✅ Resep berhasil diisi otomatis! Silakan periksa & lengkapi sebelum simpan.', 'success');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function handleAiExtractPhoto(){
+  const file = $('aiPhotoInput').files?.[0];
+  if(!file) return setAiStatus('Pilih foto dulu.', 'error');
+  setAiStatus('⏳ Membaca foto dengan AI... (bisa 10-20 detik)', 'loading');
+  try {
+    const base64 = await fileToBase64(file);
+    const recipe = await callExtractRecipeApi({ mode: 'photo', imageBase64: base64 });
+    applyExtractedRecipe(recipe, 'AI');
+  } catch(err){
+    setAiStatus('❌ ' + err.message, 'error');
+  }
+}
+
+async function handleAiExtractYoutube(){
+  const url = $('aiYoutubeInput').value.trim();
+  if(!url) return setAiStatus('Paste link YouTube dulu.', 'error');
+  setAiStatus('⏳ Mengambil transcript & memproses dengan AI...', 'loading');
+  try {
+    const recipe = await callExtractRecipeApi({ mode: 'youtube', youtubeUrl: url });
+    applyExtractedRecipe(recipe, 'YouTube');
+    $('link_sumber').value = url;
+  } catch(err){
+    setAiStatus('❌ ' + err.message, 'error');
+  }
+}
+
+async function handleAiExtractText(){
+  const text = $('aiTextInput').value.trim();
+  if(!text) return setAiStatus('Tulis atau paste teks dulu.', 'error');
+  setAiStatus('⏳ Merapikan teks dengan AI...', 'loading');
+  try {
+    const recipe = await callExtractRecipeApi({ mode: 'text', rawText: text });
+    applyExtractedRecipe(recipe, 'AI');
+  } catch(err){
+    setAiStatus('❌ ' + err.message, 'error');
+  }
+}
+
+function setupAiTabs(){
+  document.querySelectorAll('.ai-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ai-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.ai-panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelector(`.ai-panel[data-aipanel="${tab.dataset.aitab}"]`).classList.add('active');
+      setAiStatus(null);
+    });
+  });
+}
 
 function countRecipesUsingIngredient(name){
   const lower = name.toLowerCase();
@@ -655,7 +916,52 @@ function renderMasterUnits(){
 
 function renderDashboard(){
   if($('dash5star')) $('dash5star').textContent = recipes.filter(r=>Number(r.rating_keluarga)===5).length;
-  if($('dashLatest')) $('dashLatest').textContent = Math.min(recipes.length,5);
+  if($('dashTotalCooked')) $('dashTotalCooked').textContent = cookLog.length;
+  renderTopCooked();
+  renderWeeklyChart();
+}
+
+function renderTopCooked(){
+  const el = $('topCookedList'); if(!el) return;
+  if(!cookLog.length){ el.innerHTML = '<p class="muted">Belum ada data. Tandai resep "Sudah Dimasak" untuk mulai mencatat.</p>'; return; }
+  const counts = {};
+  cookLog.forEach(c => { counts[c.recipe_id] = (counts[c.recipe_id]||0) + 1; });
+  const ranked = Object.entries(counts)
+    .map(([id, count]) => ({ recipe: recipes.find(r=>r.id===id), count }))
+    .filter(x => x.recipe)
+    .sort((a,b) => b.count - a.count)
+    .slice(0, 5);
+  if(!ranked.length){ el.innerHTML = '<p class="muted">Belum ada data.</p>'; return; }
+  const maxCount = ranked[0].count;
+  el.innerHTML = ranked.map(({recipe, count}) => `
+    <div class="top-cooked-row" onclick='viewRecipe("${recipe.id}")'>
+      <span class="top-cooked-name">${escapeHtml(recipe.nama_resep)}</span>
+      <div class="top-cooked-bar-wrap"><div class="top-cooked-bar" style="width:${Math.max(12, (count/maxCount)*100)}%"></div></div>
+      <span class="top-cooked-count">${count}x</span>
+    </div>`).join('');
+}
+
+function renderWeeklyChart(){
+  const el = $('weeklyChart'); if(!el) return;
+  const days = [];
+  const today = new Date();
+  for(let i=6; i>=0; i--){
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.push({ key: d.toISOString().slice(0,10), label: d.toLocaleDateString('id-ID',{weekday:'short'}), count: 0 });
+  }
+  cookLog.forEach(c => {
+    const key = new Date(c.cooked_at).toISOString().slice(0,10);
+    const match = days.find(d => d.key === key);
+    if(match) match.count++;
+  });
+  const maxCount = Math.max(1, ...days.map(d=>d.count));
+  el.innerHTML = days.map(d => `
+    <div class="week-bar-col">
+      <div class="week-bar" style="height:${Math.max(4,(d.count/maxCount)*60)}px"></div>
+      <span class="week-bar-count">${d.count||''}</span>
+      <span class="week-bar-label">${d.label}</span>
+    </div>`).join('');
 }
 
 function renderGallery(){
@@ -703,6 +1009,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const f = $('foto_file').files?.[0];
     if(!f) return setPhotoPreview(null);
     setPhotoPreview(URL.createObjectURL(f));
+  });
+
+  // Extra photos local preview (before upload)
+  $('foto_files_extra').addEventListener('change', () => {
+    const files = Array.from($('foto_files_extra').files || []);
+    const el = $('extraPhotosPreview');
+    const pendingHtml = files.map(f => `<div class="extra-thumb pending"><img src="${URL.createObjectURL(f)}" alt="Baru" /><span class="pending-badge">Baru</span></div>`).join('');
+    el.innerHTML = extraPhotosState.map((url, i) => `
+      <div class="extra-thumb">
+        <img src="${url}" alt="Foto tambahan ${i+1}" />
+        <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
+      </div>`).join('') + pendingHtml;
   });
 
   // Ingredient group add
@@ -762,9 +1080,42 @@ document.addEventListener('DOMContentLoaded', () => {
     deferredPrompt = null;
   });
 
+  // Voice search (Web Speech API)
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voiceBtn = $('voiceSearchBtn');
+  if(SpeechRecognition && voiceBtn){
+    voiceBtn.style.display = 'flex';
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'id-ID';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    voiceBtn.addEventListener('click', () => {
+      voiceBtn.textContent = '🔴';
+      voiceBtn.disabled = true;
+      try { recognition.start(); } catch(e){ console.warn('Speech recognition error:', e); }
+    });
+    recognition.addEventListener('result', (e) => {
+      const transcript = e.results[0][0].transcript;
+      $('searchInput').value = transcript;
+      renderRecipes();
+    });
+    const resetVoiceBtn = () => { voiceBtn.textContent = '🎤'; voiceBtn.disabled = false; };
+    recognition.addEventListener('end', resetVoiceBtn);
+    recognition.addEventListener('error', resetVoiceBtn);
+  }
+
+  // AI Recipe Extraction
+  setupAiTabs();
+  $('aiExtractPhotoBtn').addEventListener('click', handleAiExtractPhoto);
+  $('aiExtractYoutubeBtn').addEventListener('click', handleAiExtractYoutube);
+  $('aiExtractTextBtn').addEventListener('click', handleAiExtractText);
+
+  // Default plan start date = today
+  if($('planStartDate')) $('planStartDate').value = new Date().toISOString().slice(0,10);
+
   // Init
   resetForm();
   loadAll();
 
-  console.log('✅ Resep Keluarga Yonarta v1.1.0 loaded');
+  console.log('✅ Resep Keluarga Yonarta v1.3.0 loaded');
 });

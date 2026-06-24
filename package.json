@@ -1,0 +1,8 @@
+{
+  "name": "resep-keluarga-yonarta",
+  "version": "1.4.0",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
