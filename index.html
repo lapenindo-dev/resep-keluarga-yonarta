@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.1.0</title>
+  <title>Resep Keluarga Yonarta v2.1.1</title>
   <meta name="theme-color" content="#f59e0b" />
-  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan meal planner, backup data, koleksi resep, print resep, dan dashboard statistik." />
+  <meta name="description" content="Kumpulan resep keluarga Yonarta dengan login email, share aplikasi, meal planner, backup data, koleksi resep, print resep, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Resep Yonarta" />
@@ -16,7 +16,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="auth-locked">
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">🍳</div>
+      <p class="eyebrow">Resep Keluarga Yonarta</p>
+      <h2>Masuk dengan Email</h2>
+      <p class="muted">Aplikasi ini hanya untuk keluarga. Masukkan email yang sudah diizinkan di Supabase Auth.</p>
+      <label>Email
+        <input id="loginEmail" type="email" placeholder="nama@email.com" autocomplete="email" />
+      </label>
+      <button id="loginBtn" class="primary wide" type="button">Kirim Link Login</button>
+      <div id="authStatus" class="ai-status" style="display:none"></div>
+      <p class="hint">Tips: untuk membatasi akses, buat/undang email keluarga di Supabase Authentication dan matikan open signup bila perlu.</p>
+    </div>
+  </div>
   <!-- Install banner -->
   <div id="installBanner" class="install-banner" style="display:none">
     <span>📲 Install sebagai app?</span>
@@ -34,7 +48,11 @@
         <h1>Yonarta</h1>
       </div>
     </div>
-    <button id="refreshBtn" class="icon-btn" title="Refresh data">⟳</button>
+    <div class="topbar-actions">
+      <button id="shareAppBtn" class="icon-btn" title="Share aplikasi">↗</button>
+      <button id="refreshBtn" class="icon-btn" title="Refresh data">⟳</button>
+      <button id="logoutBtn" class="icon-btn" title="Logout">⎋</button>
+    </div>
   </header>
 
   <main>
@@ -44,6 +62,7 @@
         <div class="card"><b id="totalFavorit">0</b><span>Favorit</span></div>
       </div>
       <button class="primary wide" data-go="add">+ Tambah Resep</button>
+      <button id="shareAppHomeBtn" class="secondary wide" type="button">📤 Share Aplikasi ke Keluarga</button>
       <button class="secondary wide" data-go="recipes">🔍 Cari Resep</button>
       <button class="secondary wide" data-go="tools">🧰 Backup / Koleksi / Print</button>
       <div class="actions"><button id="randomRecipeBtn" class="primary">🎲 Masak Apa Hari Ini?</button></div>
@@ -321,7 +340,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2.1.1"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));

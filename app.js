@@ -1,6 +1,6 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.1.0
-   AI Menu Generator fleksibel + Backup + Koleksi + Print/PDF + Dashboard Statistik
+   Resep Keluarga Yonarta v2.1.1
+   Login Email + Share Aplikasi + AI Menu Generator + Backup + Koleksi + Print/PDF
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
 const SUPABASE_URL = 'https://eswokjdhyktikcxranpo.supabase.co';
@@ -9,6 +9,8 @@ let db;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
 catch(e){ console.error('Supabase init gagal:', e); }
 const PHOTO_BUCKET = 'recipe-photos';
+let currentUser = null;
+
 
 let recipes = [];
 let masterIngredients = [];
@@ -37,6 +39,108 @@ const csvArray = (v) => (v || '').split(',').map(x => x.trim()).filter(Boolean);
 const stars = (n) => n > 0 ? '⭐'.repeat(Math.min(Number(n)||0, 5)) : 'Belum ada rating';
 const escapeHtml = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const displayIngredient = (it) => `${it.nama_bahan || ''}${it.jumlah ? ' - ' + it.jumlah : ''}${it.satuan ? ' ' + it.satuan : ''}`.trim();
+
+/* ---------- Auth helpers ---------- */
+
+function setAuthStatus(message, type='loading'){
+  const el = $('authStatus');
+  if(!el) return;
+  if(!message){ el.style.display='none'; el.textContent=''; el.className='ai-status'; return; }
+  el.style.display='block';
+  el.className='ai-status ' + type;
+  el.textContent = message;
+}
+
+function renderAuthState(){
+  const locked = !currentUser;
+  document.body.classList.toggle('auth-locked', locked);
+  const authScreen = $('authScreen');
+  if(authScreen) authScreen.style.display = locked ? 'flex' : 'none';
+  const titleWrap = document.querySelector('.topbar-left > div');
+  let mini = $('userMini');
+  if(!mini && titleWrap){
+    mini = document.createElement('p');
+    mini.id = 'userMini';
+    mini.className = 'user-mini';
+    titleWrap.appendChild(mini);
+  }
+  if(mini) mini.textContent = currentUser?.email ? 'Login: ' + currentUser.email : '';
+}
+
+async function initAuth(){
+  if(!db){
+    setAuthStatus('Database belum siap. Refresh halaman.', 'error');
+    return;
+  }
+  try{
+    const { data } = await db.auth.getSession();
+    currentUser = data?.session?.user || null;
+    renderAuthState();
+    db.auth.onAuthStateChange(async (_event, session) => {
+      currentUser = session?.user || null;
+      renderAuthState();
+      if(currentUser){
+        setAuthStatus(null);
+        await loadAll();
+      }
+    });
+    if(currentUser){
+      await loadAll();
+    } else {
+      setAuthStatus('Silakan login dulu untuk membuka resep keluarga.', 'loading');
+    }
+  } catch(e){
+    console.error('Auth init gagal:', e);
+    setAuthStatus('Auth gagal dimuat: ' + e.message, 'error');
+  }
+}
+
+async function sendLoginEmail(){
+  const email = ($('loginEmail')?.value || '').trim();
+  if(!email) return setAuthStatus('Masukkan email dulu.', 'error');
+  setAuthStatus('Mengirim link login ke email...', 'loading');
+  const redirectTo = window.location.origin + window.location.pathname;
+  const { error } = await db.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo, shouldCreateUser: false }
+  });
+  if(error){
+    setAuthStatus('Gagal kirim link login: ' + error.message, 'error');
+    return;
+  }
+  setAuthStatus('✅ Link login sudah dikirim. Buka email, klik link login, lalu kembali ke aplikasi.', 'success');
+}
+
+async function logout(){
+  if(!db) return;
+  await db.auth.signOut();
+  currentUser = null;
+  recipes = []; masterIngredients = []; masterUnits = []; cookLog = [];
+  renderAuthState();
+  setAuthStatus('Anda sudah logout.', 'success');
+}
+
+function requireLogin(){
+  if(currentUser) return true;
+  renderAuthState();
+  setAuthStatus('Silakan login dulu.', 'error');
+  return false;
+}
+
+async function shareApp(){
+  const url = window.location.origin + window.location.pathname;
+  const text = `🍳 Resep Keluarga Yonarta\nBuka aplikasi resep keluarga di sini:\n${url}`;
+  if(navigator.share){
+    try{ await navigator.share({ title:'Resep Keluarga Yonarta', text, url }); return; }
+    catch(e){ if(e.name === 'AbortError') return; }
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    alert('Link aplikasi sudah disalin. Tinggal paste ke WhatsApp keluarga.');
+  } catch(e){
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  }
+}
 
 /* ---------- Ingredient helpers ---------- */
 
@@ -76,6 +180,7 @@ function ingredientsDetailHtml(value){
 
 async function uploadRecipePhoto(file){
   if(!file) return null;
+  if(!requireLogin()) throw new Error('Silakan login dulu.');
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const safeExt = ['jpg','jpeg','png','webp','gif'].includes(ext) ? ext : 'jpg';
   const path = `resep-${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
@@ -142,6 +247,7 @@ function updateBackButton(){
 
 async function loadAll(){
   if(!db){ alert('Koneksi database belum siap. Coba refresh halaman.'); return; }
+  if(!requireLogin()) return;
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
   if(er){ alert('Gagal ambil resep: ' + er.message); return; }
   recipes = r || [];
@@ -318,7 +424,7 @@ window.viewRecipe = (id) => {
 };
 
 window.markAsCooked = async (id) => {
-  if(!db) return;
+  if(!db || !requireLogin()) return;
   const { error } = await db.from('cook_log').insert({ recipe_id: id });
   if(error){
     alert('Gagal menandai. Pastikan migrasi SQL cook_log sudah dijalankan.\n' + error.message);
@@ -398,6 +504,7 @@ window.removeIngredientGroup = (gi)=>{ syncIngredientGroupsFromDom(); ingredient
 
 async function handleRecipeSubmit(e){
   e.preventDefault();
+  if(!requireLogin()) return;
   const id = $('recipeId').value;
   syncIngredientGroupsFromDom();
   let uploadedPhotoUrl = null;
@@ -457,6 +564,7 @@ window.editRecipe = (id)=>{
 };
 
 window.deleteRecipe = async (id)=>{
+  if(!requireLogin()) return;
   if(!confirm('Hapus resep ini?')) return;
   const {error}=await db.from('recipes').delete().eq('id',id);
   if(error) alert(error.message);
@@ -1036,6 +1144,7 @@ function countRecipesUsingIngredient(name){
 
 async function handleMasterIngredientSubmit(e){
   e.preventDefault();
+  if(!requireLogin()) return;
   const payload = { nama_bahan: $('masterIngredientName').value.trim(), kategori_bahan: $('masterIngredientCategory').value };
   if(!payload.nama_bahan) return;
   const { error } = await db.from('master_ingredients').insert(payload);
@@ -1044,6 +1153,7 @@ async function handleMasterIngredientSubmit(e){
 }
 
 window.deleteMasterIngredient = async (id)=>{
+  if(!requireLogin()) return;
   if(!confirm('Hapus master bahan ini?')) return;
   const {error}=await db.from('master_ingredients').delete().eq('id',id);
   if(error) alert(error.message);
@@ -1051,6 +1161,7 @@ window.deleteMasterIngredient = async (id)=>{
 };
 
 window.editMasterIngredient = async (id)=>{
+  if(!requireLogin()) return;
   const item = masterIngredients.find(i=>i.id===id);
   if(!item) return;
   const newName = prompt('Nama bahan:', item.nama_bahan);
@@ -1091,6 +1202,7 @@ function renderMasterIngredients(){
 
 async function handleMasterUnitSubmit(e){
   e.preventDefault();
+  if(!requireLogin()) return;
   const val = $('masterUnitName').value.trim();
   if(!val) return;
   const { error } = await db.from('master_units').insert({ nama_satuan: val });
@@ -1099,6 +1211,7 @@ async function handleMasterUnitSubmit(e){
 }
 
 window.deleteMasterUnit = async (id)=>{
+  if(!requireLogin()) return;
   if(!confirm('Hapus satuan ini?')) return;
   const {error}=await db.from('master_units').delete().eq('id',id);
   if(error) alert(error.message);
@@ -1106,6 +1219,7 @@ window.deleteMasterUnit = async (id)=>{
 };
 
 window.editMasterUnit = async (id)=>{
+  if(!requireLogin()) return;
   const item = masterUnits.find(u=>u.id===id);
   if(!item) return;
   const newName = prompt('Nama satuan:', item.nama_satuan);
@@ -1322,9 +1436,10 @@ function downloadTextFile(filename, text, mime='application/json'){
 }
 
 window.exportDataBackup = () => {
+  if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga Yonarta',
-    version: '2.1.0',
+    version: '2.1.1',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1373,6 +1488,7 @@ async function insertRecipesFromBackup(items){
 }
 
 window.importDataBackup = async () => {
+  if(!requireLogin()) return;
   const file = $('importDataFile')?.files?.[0];
   if(!file) return setBackupStatus('Pilih file backup JSON dulu.', 'error');
   if(!confirm('Import backup akan menambahkan resep yang belum ada dan mengganti data lokal seperti koleksi/jadwal. Lanjut?')) return;
@@ -1431,6 +1547,12 @@ window.printRecipe = (id) => {
 /* ========== INIT — all event handlers ========== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  if($('loginBtn')) $('loginBtn').addEventListener('click', sendLoginEmail);
+  if($('loginEmail')) $('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendLoginEmail(); });
+  if($('logoutBtn')) $('logoutBtn').addEventListener('click', logout);
+  if($('shareAppBtn')) $('shareAppBtn').addEventListener('click', shareApp);
+  if($('shareAppHomeBtn')) $('shareAppHomeBtn').addEventListener('click', shareApp);
+
   // Navigation
   document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 
@@ -1583,7 +1705,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init
   resetForm();
   updateBackButton();
-  loadAll();
+  renderAuthState();
+  initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.1.0 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.1.1 loaded');
 });

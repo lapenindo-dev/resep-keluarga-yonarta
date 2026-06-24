@@ -28,6 +28,17 @@ h1,h2,h3,h4{font-family:'Fraunces',serif}
 h1{font-size:27px;margin:5px 0 0;font-weight:700;letter-spacing:-.01em}
 h2{font-size:19px;margin:22px 0 12px;font-weight:600}
 main{padding:0 20px}
+
+/* ========== AUTH / SHARE APP ========== */
+body.auth-locked header, body.auth-locked main, body.auth-locked nav, body.auth-locked .install-banner{display:none!important}
+.auth-screen{position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,var(--paper),#EAD7B7);display:flex;align-items:center;justify-content:center;padding:22px}
+.auth-card{width:100%;max-width:420px;background:var(--paper-card);border:1px solid var(--border);border-radius:12px;padding:24px;box-shadow:5px 7px 0 var(--border)}
+.auth-logo{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--danger-bg);font-size:28px;margin-bottom:12px;border:1px solid var(--border)}
+.auth-card h2{font-size:25px;margin:8px 0 10px}
+.auth-card .ai-status{margin-top:12px}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.user-mini{font-size:11px;color:var(--ink-soft);font-weight:700;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+
 .icon-btn{width:40px;height:40px;border-radius:50%;background:var(--paper-card);border:1px solid var(--border);font-size:17px;color:var(--ink);flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0}
 
 /* Pages */
