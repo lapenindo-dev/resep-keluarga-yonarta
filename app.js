@@ -1,7 +1,7 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.0.2
+   Resep Keluarga Yonarta v2.0.3
    AI Menu Generator fleksibel + Shopping List + Dashboard Statistik
-   AI Extract (Qwen): Foto, YouTube Transcript, TikTok/Teks Manual
+   AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
 const SUPABASE_URL = 'https://eswokjdhyktikcxranpo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_pV3wADDW91aY_0fbOSS39g_cUt39Cnu';
@@ -25,7 +25,7 @@ try { mealPlan = JSON.parse(localStorage.getItem('mealPlanV200') || localStorage
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
 const MEAL_LABELS = ['Siang','Malam'];
-// v2.0.2: YouTube transcript multi-metode + fallback manual; slot tetap Siang dan Malam
+// v2.0.3: YouTube otomatis dihapus; input resep dari video lewat Teks/Caption manual
 mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
 
 const $ = (id) => document.getElementById(id);
@@ -885,7 +885,6 @@ function setAiStatus(message, type){
 function clearAiPanel(){
   if($('aiPhotoInput')) $('aiPhotoInput').value = '';
   if($('aiPhotoPreview')) $('aiPhotoPreview').innerHTML = '';
-  if($('aiYoutubeInput')) $('aiYoutubeInput').value = '';
   if($('aiTextInput')) $('aiTextInput').value = '';
   setAiStatus(null);
 }
@@ -990,40 +989,14 @@ async function handleAiExtractPhoto(){
   }
 }
 
-async function handleAiExtractYoutube(){
-  const url = $('aiYoutubeInput').value.trim();
-  if(!url) return setAiStatus('Paste link YouTube dulu.', 'error');
-  setAiStatus('⏳ Mengambil transcript & memproses dengan AI...', 'loading');
-  try {
-    const recipe = await callExtractRecipeApi({ mode: 'youtube', youtubeUrl: url });
-    applyExtractedRecipe(recipe, 'YouTube');
-    $('link_sumber').value = url;
-  } catch(err){
-    setAiStatus('❌ ' + err.message, 'error');
-  }
-}
-
-async function handleAiProcessYoutubeManual(){
-  const text = $('aiYoutubeManualText')?.value?.trim() || '';
-  const url = $('aiYoutubeInput')?.value?.trim() || '';
-  if(!text) return setAiStatus('Paste transcript/caption YouTube dulu di kolom manual.', 'error');
-  setAiStatus('⏳ Memproses transcript manual YouTube dengan AI...', 'loading');
-  try {
-    const recipe = await callExtractRecipeApi({ mode: 'text', rawText: text });
-    applyExtractedRecipe(recipe, 'YouTube');
-    if(url && $('link_sumber')) $('link_sumber').value = url;
-  } catch(err){
-    setAiStatus('❌ ' + err.message, 'error');
-  }
-}
-
 async function handleAiExtractText(){
   const text = $('aiTextInput').value.trim();
+  const source = $('aiTextSource')?.value || 'AI';
   if(!text) return setAiStatus('Tulis atau paste teks dulu.', 'error');
   setAiStatus('⏳ Merapikan teks dengan AI...', 'loading');
   try {
     const recipe = await callExtractRecipeApi({ mode: 'text', rawText: text });
-    applyExtractedRecipe(recipe, 'AI');
+    applyExtractedRecipe(recipe, source);
   } catch(err){
     setAiStatus('❌ ' + err.message, 'error');
   }
@@ -1366,9 +1339,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // AI Recipe Extraction
   setupAiTabs();
   $('aiExtractPhotoBtn').addEventListener('click', handleAiExtractPhoto);
-  $('aiExtractYoutubeBtn').addEventListener('click', handleAiExtractYoutube);
   $('aiExtractTextBtn').addEventListener('click', handleAiExtractText);
-  if($('aiProcessYoutubeManualBtn')) $('aiProcessYoutubeManualBtn').addEventListener('click', handleAiProcessYoutubeManual);
   $('aiPhotoInput').addEventListener('change', () => {
     const files = Array.from($('aiPhotoInput').files || []);
     $('aiPhotoPreview').innerHTML = files.map(f => `<div class="extra-thumb"><img src="${URL.createObjectURL(f)}" alt="Foto AI" /></div>`).join('');
@@ -1383,5 +1354,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateBackButton();
   loadAll();
 
-  console.log('✅ Resep Keluarga Yonarta v2.0.2 loaded');
+  console.log('✅ Resep Keluarga Yonarta v2.0.3 loaded');
 });

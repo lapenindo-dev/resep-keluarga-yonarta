@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga Yonarta v2.0.2</title>
+  <title>Resep Keluarga Yonarta v2.0.3</title>
   <meta name="theme-color" content="#f59e0b" />
   <meta name="description" content="Kumpulan resep keluarga Yonarta dengan meal planner, shopping list otomatis, dan dashboard statistik." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -98,8 +98,7 @@
         </div>
         <div class="ai-tabs">
           <button class="ai-tab active" data-aitab="photo" type="button">📷 Foto</button>
-          <button class="ai-tab" data-aitab="youtube" type="button">📺 YouTube</button>
-          <button class="ai-tab" data-aitab="text" type="button">🎵 TikTok / Teks</button>
+          <button class="ai-tab" data-aitab="text" type="button">📝 Teks / Caption</button>
         </div>
 
         <div class="ai-panel active" data-aipanel="photo">
@@ -109,19 +108,16 @@
           <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Ekstrak dari Foto</button>
         </div>
 
-        <div class="ai-panel" data-aipanel="youtube">
-          <p class="hint">Paste link video YouTube. Sistem akan mencoba beberapa metode otomatis. Jika tetap gagal, paste transcript manual di kolom bawah lalu klik Proses Teks Manual.</p>
-          <input id="aiYoutubeInput" type="url" placeholder="https://youtube.com/watch?v=..." />
-          <button class="primary wide" id="aiExtractYoutubeBtn" type="button">✨ Ambil dari YouTube</button>
-          <div class="manual-transcript-box">
-            <p class="hint small">Jika otomatis gagal: YouTube → deskripsi/⋯ Selengkapnya → Tampilkan transcript → copy → paste di sini.</p>
-            <textarea id="aiYoutubeManualText" placeholder="Paste transcript/caption YouTube di sini..."></textarea>
-            <button class="secondary wide" id="aiProcessYoutubeManualBtn" type="button">📝 Proses Teks Manual YouTube</button>
-          </div>
-        </div>
 
         <div class="ai-panel" data-aipanel="text">
-          <p class="hint">TikTok tidak punya transcript otomatis. Paste caption atau ketik manual apa yang Anda dengar/lihat di video.</p>
+          <p class="hint">Paste caption, transcript manual, teks TikTok, catatan resep, atau teks dari YouTube. Sistem tidak lagi mengambil YouTube otomatis.</p>
+          <label class="mini-label">Simpan sebagai sumber
+            <select id="aiTextSource">
+              <option value="AI">AI</option>
+              <option value="YouTube">YouTube</option>
+              <option value="Manual">Manual</option>
+            </select>
+          </label>
           <textarea id="aiTextInput" placeholder="Contoh: Bahan: 500gr ayam, 3 bawang putih... Cara: tumis bawang sampai harum..."></textarea>
           <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan dengan AI</button>
         </div>
@@ -190,7 +186,7 @@
         </label>
         <label>Tag<input id="tag" placeholder="air fryer, cepat, hemat" /></label>
         <label>Catatan Yonarta<textarea id="catatan_yonarta"></textarea></label>
-        <label>Link Sumber<input id="link_sumber" placeholder="YouTube / website" /></label>
+        <label>Link Sumber<input id="link_sumber" placeholder="YouTube / TikTok / website / sumber lain" /></label>
         <button class="primary wide" type="submit">Simpan Resep</button>
         <button class="ghost wide" type="button" id="cancelEdit">Batal</button>
       </form>

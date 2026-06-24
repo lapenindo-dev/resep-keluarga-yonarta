@@ -1,4 +1,4 @@
-# Setup Fitur AI Qwen — v2.0.2
+# Setup Fitur AI Qwen — v2.0.3
 
 ## 1. Daftar & Dapatkan API Key Qwen
 1. Buka https://www.alibabacloud.com/help/en/model-studio/get-api-key
@@ -47,11 +47,11 @@ di bawah $1/bulan. Cek dashboard Alibaba Cloud Model Studio untuk monitor pemaka
 
 ## Troubleshooting
 - **"DASHSCOPE_API_KEY belum diset"** → cek langkah 2, pastikan sudah redeploy
-- **YouTube "tidak memiliki transcript"** → video tidak ada caption sama sekali, pakai tab "TikTok/Teks" untuk input manual
+- **Resep dari video** → copy caption/transcript manual lalu paste ke tab "Teks / Caption"
 - **Error 401/403 dari Qwen** → API key salah atau belum aktif, cek di Alibaba Cloud Console
 
 
-## v2.0.2 — AI Menu Generator
+## v2.0.3 — AI Menu Generator
 
 Endpoint baru:
 
@@ -72,13 +72,16 @@ DASHSCOPE_API_KEY=isi_api_key_dashscope_anda
 ```
 
 
-## Catatan YouTube v2.0.2
+## Catatan Teks/Caption v2.0.3
 
-Fitur YouTube sekarang memakai beberapa metode otomatis:
+Fitur ambil transcript YouTube otomatis sudah dihapus karena tidak stabil di Vercel/server hosting.
 
-1. library `youtube-transcript`
-2. library `youtubei.js` / Innertube
-3. parsing captionTracks dari halaman YouTube / YouTube-nocookie
-4. endpoint timedtext langsung
+Cara input resep dari video:
 
-Tambahkan dependency di `package.json` sudah otomatis. Saat deploy Vercel, jalankan install normal. Jika YouTube tetap memblokir transcript, gunakan kolom manual di tab YouTube: copy transcript dari YouTube lalu klik **Proses Teks Manual YouTube**.
+1. Buka video YouTube/TikTok.
+2. Copy caption/transcript/teks resep secara manual.
+3. Paste ke tab **Teks / Caption**.
+4. Pilih sumber: `AI`, `YouTube`, atau `Manual`.
+5. Klik **Rapikan dengan AI**.
+
+Tidak ada dependency tambahan untuk YouTube di `package.json`.
