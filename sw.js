@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-keluarga-v3.1.3-desktop-fix';
+const CACHE_NAME = 'resep-keluarga-v3.4.0';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
