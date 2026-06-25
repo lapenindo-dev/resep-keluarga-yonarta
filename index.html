@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga v3.0.1</title>
+  <title>Resep Keluarga v3.0.2</title>
   <meta name="theme-color" content="#8B5E34" />
   <meta name="description" content="Buku resep keluarga digital untuk menyimpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3.0.1" />
+  <link rel="stylesheet" href="style.css?v=3.0.2" />
 </head>
 <body class="auth-locked">
   <div id="drawerBackdrop" class="drawer-backdrop" aria-hidden="true"></div>
@@ -30,7 +30,7 @@
     </div>
     <div class="hub-trust-card">
       <b>Simpan · Rapikan · Bagikan · Wariskan</b>
-      <span>Family Recipe Heritage App v3.0.1</span>
+      <span>Family Recipe Heritage App v3.0.2</span>
     </div>
     <nav class="hub-nav" aria-label="Family Hub">
       <p class="hub-section-label">Keluarga & Warisan</p>
@@ -157,7 +157,66 @@
     <section id="add" class="page">
       <div id="formModeBanner" class="page-mode-banner add-mode"><span>➕ Simpan Resep Keluarga</span><small>Catat resep hari ini supaya tetap hidup untuk anak cucu.</small></div>
       <h2 id="formTitle">Simpan Resep Keluarga</h2>
-      <div class="capture-choice-grid" id="captureChoiceGrid">
+      <p class="muted quick-capture-intro">Cara paling sering dipakai: mulai dari foto resep di kertas, screenshot, chat, atau caption. AI membantu merapikan; hasil tetap bisa diedit sebelum disimpan.</p>
+
+      <div class="ai-extract-box quick-capture-box">
+        <div class="section-title-row">
+          <h3>📷 Mulai dari Foto / Caption Resep</h3>
+        </div>
+        <div class="ai-tabs input-recipe-tabs">
+          <button class="ai-tab active" data-aitab="photo-caption" type="button">📷 Foto / Caption</button>
+          <button class="ai-tab" data-aitab="manual" type="button">✍️ Input Manual</button>
+        </div>
+
+        <div class="ai-panel" data-aipanel="manual">
+          <p class="hint">Gunakan manual jika resep sudah Anda ingat dan ingin langsung ditulis pelan-pelan.</p>
+          <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">✍️ Isi Manual di Bawah</button>
+        </div>
+
+        <div class="ai-panel active" data-aipanel="photo-caption">
+          <p class="hint">Paling cepat: upload foto resep dari kertas / screenshot, atau paste caption resep. AI akan merapikan menjadi bahan dan langkah, lalu Anda tetap bisa edit sebelum simpan.</p>
+
+          <div class="input-method-card">
+            <h4>📷 Dari Foto Resep / Kertas Lama</h4>
+            <p class="hint">Upload foto resep dari kertas, buku lama, tulisan tangan, screenshot chat, atau catatan keluarga. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
+            <label class="mini-label">Simpan sebagai asal resep
+              <select id="aiPhotoSource">
+                <option value="Keluarga">Keluarga</option>
+                <option value="Warisan">Warisan</option>
+                <option value="Internet">Internet</option>
+                <option value="Teman">Teman</option>
+                <option value="Kreasi sendiri">Kreasi sendiri</option>
+              </select>
+            </label>
+            <input id="aiPhotoInput" type="file" accept="image/*" multiple />
+            <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
+            <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Baca & Rapikan dari Foto</button>
+          </div>
+
+          <div class="input-method-card">
+            <h4>📝 Dari Caption / Teks</h4>
+            <p class="hint">Paste caption TikTok/Instagram, transcript YouTube yang dicopy manual, chat WhatsApp, atau catatan resep keluarga dari Mama/Oma.</p>
+            <label class="mini-label">Simpan sebagai asal resep
+              <select id="aiTextSource">
+                <option value="Internet">Internet</option>
+                <option value="Keluarga">Keluarga</option>
+                <option value="Warisan">Warisan</option>
+                <option value="Teman">Teman</option>
+                <option value="Kreasi sendiri">Kreasi sendiri</option>
+              </select>
+            </label>
+            <textarea id="aiTextInput" placeholder="Contoh:
+Bahan: 500gr ayam, 3 siung bawang putih, 2 sdm kecap.
+Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
+            <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan Caption Jadi Resep</button>
+          </div>
+        </div>
+
+        <div id="aiExtractStatus" class="ai-status" style="display:none"></div>
+      </div>
+
+      <h3 class="mini-section-heading">Asal Resep</h3>
+      <div class="capture-choice-grid compact-source-grid" id="captureChoiceGrid">
         <button class="capture-choice active" type="button" data-source-choice="Keluarga">👨‍👩‍👧‍👦<b>Keluarga</b><span>Resep dari rumah, Mama, Papa, Oma, atau saudara.</span></button>
         <button class="capture-choice" type="button" data-source-choice="Warisan">📜<b>Warisan</b><span>Resep bernilai sentimental untuk dijaga lintas generasi.</span></button>
         <button class="capture-choice" type="button" data-source-choice="Internet">🌐<b>Internet</b><span>Resep dari website, caption, atau transcript yang dirapikan.</span></button>
@@ -180,52 +239,6 @@
           <input id="foto_files_extra" type="file" accept="image/*" multiple />
           <div id="extraPhotosPreview" class="extra-photos-preview responsive-extra-grid"></div>
         </label>
-      <div class="ai-extract-box advanced-field">
-        <div class="section-title-row">
-          <h3>✨ Input Resep Keluarga</h3>
-        </div>
-        <div class="ai-tabs input-recipe-tabs">
-          <button class="ai-tab active" data-aitab="manual" type="button">✍️ Input Manual</button>
-          <button class="ai-tab" data-aitab="photo-caption" type="button">📷 Foto / Caption</button>
-        </div>
-
-        <div class="ai-panel active" data-aipanel="manual">
-          <p class="hint">Isi resep secara manual. Cocok untuk resep keluarga yang sudah diingat atau ingin ditulis pelan-pelan.</p>
-          <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">✍️ Mulai Menyimpan Resep</button>
-        </div>
-
-        <div class="ai-panel" data-aipanel="photo-caption">
-          <p class="hint">Gunakan foto catatan lama, screenshot resep, atau paste catatan keluarga. Sistem tidak mengambil YouTube otomatis.</p>
-
-          <div class="input-method-card">
-            <h4>📷 Dari Foto</h4>
-            <p class="hint">Upload foto resep, catatan tulisan tangan, screenshot, atau foto bahan. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
-            <input id="aiPhotoInput" type="file" accept="image/*" multiple />
-            <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
-            <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Rapikan dari Foto Kenangan</button>
-          </div>
-
-          <div class="input-method-card">
-            <p class="hint">Paste caption TikTok/Instagram, transcript YouTube yang dicopy manual, atau catatan resep keluarga dari Mama/Oma.</p>
-            <label class="mini-label">Simpan sebagai asal resep
-              <select id="aiTextSource">
-                <option value="Internet">Internet</option>
-                <option value="Warisan">Warisan</option>
-                <option value="Keluarga">Keluarga</option>
-                <option value="Teman">Teman</option>
-                <option value="Kreasi sendiri">Kreasi sendiri</option>
-              </select>
-            </label>
-            <textarea id="aiTextInput" placeholder="Contoh:
-Bahan: 500gr ayam, 3 siung bawang putih, 2 sdm kecap.
-Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
-            <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan Jadi Resep Keluarga</button>
-          </div>
-        </div>
-
-        <div id="aiExtractStatus" class="ai-status" style="display:none"></div>
-      </div>
-
         <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Ayam Kecap Mama" /></label>
         <label class="advanced-field">Resep dari Siapa <small class="hint">Contoh: Mama, Papa, Oma, Nenek, atau nama anggota keluarga.</small>
           <input id="penulis_nama" placeholder="Contoh: Mama" />
@@ -392,7 +405,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
       <h2>🛒 Shopping List</h2>
       <p class="muted">Daftar belanja dibuat dari rencana masak. Pilih resep di halaman Rencana, lalu buat daftar belanja otomatis.</p>
       <button class="primary wide" data-go="plan" type="button">📅 Buka Rencana Masak</button>
-      <div class="tool-card"><h3>Prinsip v3.0.1</h3><p>Shopping list masuk Family Hub karena penting secara operasional, tetapi bukan aksi harian utama untuk semua pengguna.</p></div>
+      <div class="tool-card"><h3>Prinsip v3.0.2</h3><p>Shopping list masuk Family Hub karena penting secara operasional, tetapi bukan aksi harian utama untuk semua pengguna.</p></div>
     </section>
 
     <section id="backup" class="page">
@@ -412,7 +425,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
 
     <section id="sharing" class="page">
       <h2>🔐 Sharing Keluarga</h2>
-      <p class="muted">Fondasi sharing v3.0.1: resep hanya dibagikan kepada orang yang dipilih. Untuk fase ini, gunakan tombol share di detail resep; permission keluarga penuh disiapkan untuk rilis lanjutan.</p>
+      <p class="muted">Fondasi sharing v3.0.2: resep hanya dibagikan kepada orang yang dipilih. Untuk fase ini, gunakan tombol share di detail resep; permission keluarga penuh disiapkan untuk rilis lanjutan.</p>
       <div class="tool-card"><h3>Aturan Aman</h3><p>AI, export, dan share tidak boleh mengubah kepemilikan resep. User tetap pemilik data dan dapat mengedit hasil sebelum disimpan.</p></div>
     </section>
 
@@ -440,7 +453,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
     <section id="settings" class="page">
       <h2>⚙️ Settings</h2>
       <div class="tool-card"><h3>Akun</h3><p id="settingsAccountText" class="muted">-</p><button id="settingsLogoutBtn" class="danger wide" type="button">Logout</button></div>
-      <div class="tool-card"><h3>Standar v3.0.1</h3><p>Bottom navigation hanya untuk aksi harian. Fitur keluarga, backup, AI, dan bantuan berada di Family Hub.</p></div>
+      <div class="tool-card"><h3>Standar v3.0.2</h3><p>Bottom navigation hanya untuk aksi harian. Fitur keluarga, backup, AI, dan bantuan berada di Family Hub.</p></div>
     </section>
 
     <section id="gallery" class="page">
@@ -478,7 +491,7 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.0.1"></script>
+  <script src="app.js?v=3.0.2"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));

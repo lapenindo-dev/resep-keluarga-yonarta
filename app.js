@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.0.1
+   Resep Keluarga v3.0.2
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -16,7 +16,7 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
 // v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
 // v2.3.5: Card foto kembali square 16:16 dan filter koleksi ditambahkan di halaman resep.
-// v3.0.1: MPB alignment fix — Family Hub drawer, bottom nav 5 item, compact recipe cards, progressive recipe form.
+// v3.0.2: MPB alignment fix — Family Hub drawer, bottom nav 5 item, compact recipe cards, progressive recipe form.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -1510,7 +1510,8 @@ async function handleAiExtractPhoto(){
     const totalKB = images.reduce((sum, img) => sum + estimateBase64SizeKB(img), 0);
     setAiStatus(`⏳ Membaca ${files.length} foto (~${totalKB} KB) dengan AI...`, 'loading');
     const recipe = await callExtractRecipeApi({ mode: 'photo', imagesBase64: images });
-    applyExtractedRecipe(recipe, 'Internet');
+    const source = $('aiPhotoSource')?.value || $('sumber_resep')?.value || 'Keluarga';
+    applyExtractedRecipe(recipe, source);
   } catch(err){
     setAiStatus('❌ ' + err.message, 'error');
   }
@@ -1910,7 +1911,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga',
-    version: '3.0.1',
+    version: '3.0.2',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1921,7 +1922,7 @@ window.exportDataBackup = () => {
     recipeCollections
   };
   const date = new Date().toISOString().slice(0,10);
-  downloadTextFile(`resep-keluarga-yonarta-backup-${date}.json`, JSON.stringify(payload, null, 2));
+  downloadTextFile(`resep-keluarga-backup-${date}.json`, JSON.stringify(payload, null, 2));
   setBackupStatus('✅ Backup JSON berhasil dibuat.', 'success');
 };
 
@@ -2013,7 +2014,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.0.1</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.0.2</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2218,5 +2219,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga v3.0.1 loaded');
+  console.log('✅ Resep Keluarga v3.0.2 loaded');
 });
