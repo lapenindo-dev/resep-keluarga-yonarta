@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.5.0
+   Resep Keluarga v3.0
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -16,7 +16,7 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
 // v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
 // v2.3.5: Card foto kembali square 16:16 dan filter koleksi ditambahkan di halaman resep.
-// v2.4.0: Tema Resep Keluarga sentimental, headline Mama, cerita resep, dan audit hanya di detail.
+// v3.0: Dibangun mengikuti Master Product Bible Vol. 1, 2, dan 3: Family Hub drawer, bottom nav 5 item, warm utility UI, dan trust-first UX.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -120,7 +120,33 @@ function renderAuthState(){
   }
   if(mini) mini.textContent = currentUser?.email ? 'Login: ' + currentUser.email : '';
   updateAdminUI();
+  renderTrustIdentity();
 }
+
+function renderTrustIdentity(){
+  const account = currentUser?.email || 'Belum login';
+  const name = currentUserName() || account;
+  if($('hubUserMini')) $('hubUserMini').textContent = currentUser ? `${name} · ${account}` : 'Resep, cerita, backup, dan keluarga.';
+  if($('familyAccountText')) $('familyAccountText').textContent = account;
+  if($('settingsAccountText')) $('settingsAccountText').textContent = account;
+}
+
+function openFamilyHub(){
+  document.body.classList.add('hub-open');
+  const drawer = $('familyHubDrawer');
+  const backdrop = $('drawerBackdrop');
+  if(drawer) drawer.setAttribute('aria-hidden','false');
+  if(backdrop) backdrop.setAttribute('aria-hidden','false');
+}
+
+function closeFamilyHub(){
+  document.body.classList.remove('hub-open');
+  const drawer = $('familyHubDrawer');
+  const backdrop = $('drawerBackdrop');
+  if(drawer) drawer.setAttribute('aria-hidden','true');
+  if(backdrop) backdrop.setAttribute('aria-hidden','true');
+}
+
 
 async function initAuth(){
   if(!db){
@@ -212,9 +238,9 @@ function requireLogin(){
 
 async function shareApp(){
   const url = window.location.origin + window.location.pathname;
-  const text = `🍳 Resep Keluarga Yonarta\nBuka aplikasi resep keluarga di sini:\n${url}`;
+  const text = `🍳 Resep Keluarga\nBuka aplikasi resep keluarga di sini:\n${url}`;
   if(navigator.share){
-    try{ await navigator.share({ title:'Resep Keluarga Yonarta', text, url }); return; }
+    try{ await navigator.share({ title:'Resep Keluarga', text, url }); return; }
     catch(e){ if(e.name === 'AbortError') return; }
   }
   try{
@@ -335,6 +361,7 @@ function initBrowserBackGuard(){
 }
 
 function go(page, opts={}){
+  closeFamilyHub();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const el = $(page);
   if(el) el.classList.add('active');
@@ -355,6 +382,7 @@ function go(page, opts={}){
     pushAppBrowserState(page, false);
   }
   updateBackButton();
+  renderV3SecondaryPages();
 }
 
 function goBack(){
@@ -421,7 +449,7 @@ function render(){
   $('totalResep').textContent = recipes.length;
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
   renderCollectionFilterChips(); renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
-  renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory(); renderMealPlan(); renderCollections();
+  renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory(); renderMealPlan(); renderCollections(); renderV3SecondaryPages();
 }
 
 function renderCookNameOptions(){
@@ -469,7 +497,6 @@ function recipeCard(r){
     <div class="recipe-info">
       <h3>${escapeHtml(r.nama_resep)}</h3>
       <p class="recipe-meta">${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')}${r.durasi_menit ? ' · ' + escapeHtml(r.durasi_menit) + ' menit' : ''}</p>
-      ${r.dimasak_oleh ? `<p class="cook-by">👤 Biasanya dimasak oleh ${escapeHtml(r.dimasak_oleh)}</p>` : ''}
       <div class="stars">${stars(r.rating_keluarga)}</div>
       ${collectionPillsHtml(r.id)}
       <div class="card-actions" onclick="event.stopPropagation()">
@@ -495,7 +522,7 @@ function buildRecipeShareText(r){
     text += `Cara Memasak:\n${r.cara_memasak.map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\n`;
   }
   if(r.link_sumber) text += `Sumber: ${r.link_sumber}\n`;
-  text += '\n— Resep Keluarga Yonarta\nSimpan resep Mama hari ini, sebelum hanya tersisa kenangan.';
+  text += '\n— Resep Keluarga\nSimpan resep Mama hari ini, sebelum hanya tersisa kenangan.';
   return text;
 }
 
@@ -703,6 +730,7 @@ window.viewRecipe = (id) => {
     ${photoBlock}
     ${recipeAuditHtml(r)}
     <div class="detail-card">
+      <span class="source-badge tag-pill">${sourceIcon(r.sumber_resep)} ${escapeHtml(normalizeRecipeSource(r.sumber_resep))}</span>
       <h2>${escapeHtml(r.nama_resep)}</h2>
       <p class="rating-line">${stars(r.rating_keluarga)}</p>
       <div class="cook-track-row">
@@ -945,6 +973,8 @@ function resetForm(){
   const banner = $('formModeBanner');
   if(banner){ banner.className='page-mode-banner add-mode'; banner.innerHTML='<span>➕ Simpan Resep Keluarga</span><small>Catat resep hari ini supaya tetap hidup untuk anak cucu.</small>'; }
   if($('penulis_nama')) $('penulis_nama').value='';
+  if($('sumber_resep')) $('sumber_resep').value='Keluarga';
+  document.querySelectorAll('.capture-choice').forEach(btn=>btn.classList.toggle('active', btn.dataset.sourceChoice === 'Keluarga'));
   $('rating_keluarga').value=0;
   setPhotoPreview(null);
   extraPhotosState = [];
@@ -1745,6 +1775,20 @@ function renderHistory(){
   el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama||'')} · ${escapeHtml(r.jenis_hidangan||'')}</p></div>`).join('')||'<p class="muted">Belum ada riwayat.</p>';
 }
 
+function renderV3SecondaryPages(){
+  renderTrustIdentity();
+  renderHeritageList();
+}
+
+function renderHeritageList(){
+  const el = $('heritageList');
+  if(!el) return;
+  const heritage = recipes.filter(r => normalizeRecipeSource(r.sumber_resep) === 'Warisan' || collectionNamesForRecipe(r.id).some(n => /warisan|mama|oma|nenek/i.test(n)));
+  el.innerHTML = heritage.length
+    ? heritage.slice(0, 8).map(recipeCard).join('')
+    : '<p class="muted">Belum ada resep warisan. Mulai dari satu resep keluarga yang paling ingin disimpan.</p>';
+}
+
 
 
 /* ========== BACKUP / COLLECTIONS / PRINT ========== */
@@ -1863,8 +1907,8 @@ function downloadTextFile(filename, text, mime='application/json'){
 window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
-    app: 'Resep Keluarga Yonarta',
-    version: '2.2.2',
+    app: 'Resep Keluarga',
+    version: '3.0.0',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1875,7 +1919,7 @@ window.exportDataBackup = () => {
     recipeCollections
   };
   const date = new Date().toISOString().slice(0,10);
-  downloadTextFile(`resep-keluarga-yonarta-backup-${date}.json`, JSON.stringify(payload, null, 2));
+  downloadTextFile(`resep-keluarga-keluarga-backup-${date}.json`, JSON.stringify(payload, null, 2));
   setBackupStatus('✅ Backup JSON berhasil dibuat.', 'success');
 };
 
@@ -1967,7 +2011,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga Yonarta v2.4.0</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.0</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2047,6 +2091,13 @@ document.addEventListener('DOMContentLoaded', () => {
     renderIngredientGroups();
   });
 
+  // Source choice cards
+  document.querySelectorAll('.capture-choice').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.capture-choice').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    if($('sumber_resep')) $('sumber_resep').value = btn.dataset.sourceChoice || 'Keluarga';
+  }));
+
   // Recipe form
   $('recipeForm').addEventListener('submit', handleRecipeSubmit);
 
@@ -2072,7 +2123,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Backup / collections / print tools
   if($('exportDataBtn')) $('exportDataBtn').addEventListener('click', exportDataBackup);
   if($('importDataBtn')) $('importDataBtn').addEventListener('click', importDataBackup);
-  if($('collectionForm')) $('collectionForm').addEventListener('submit', (e)=>{ e.preventDefault(); const name=$('collectionName').value.trim(); if(!name) return; if(!recipeCollections[name]) recipeCollections[name]=[]; saveCollections(); $('collectionForm').reset(); renderCollections(); renderDashboard(); });
+  if($('collectionForm')) $('collectionForm').addEventListener('submit', (e)=>{ e.preventDefault(); const name=$('collectionName').value.trim(); if(!name) return; if(!recipeCollections[name]) recipeCollections[name]=[]; saveCollections(); $('collectionForm').reset(); renderCollections(); renderDashboard(); renderV3SecondaryPages(); });
 
   // Random recipe
   $('randomRecipeBtn').addEventListener('click', ()=>{
@@ -2154,5 +2205,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga Yonarta v2.4.0 loaded');
+  console.log('✅ Resep Keluarga v3.0 loaded');
 });
