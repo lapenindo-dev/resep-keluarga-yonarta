@@ -1,5 +1,6 @@
 /* =====================================================
-   Resep Keluarga Yonarta v2.4.0
+   Resep Keluarga Yonarta v2.5.0
+   Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
    ===================================================== */
@@ -40,17 +41,13 @@ let ingredientGroupsState = [];
 let extraPhotosState = []; // urls for current form (existing + newly uploaded)
 let mealPlan = [];
 let recipeHistory = [];
-try { recipeHistory = JSON.parse(localStorage.getItem('recipeHistory')||'[]'); } catch(e){}
-try { mealPlan = JSON.parse(localStorage.getItem('mealPlanV210') || localStorage.getItem('mealPlanV200') || localStorage.getItem('mealPlanV190') || '[]'); } catch(e){ mealPlan = []; }
 let recipeCollections = {};
-try { recipeCollections = JSON.parse(localStorage.getItem('recipeCollectionsV210') || '{}'); } catch(e){ recipeCollections = {}; }
 const DEFAULT_COLLECTIONS = ['Resep Mama','Resep Oma','Menu Harian','Menu Anak','Hari Raya','Favorit Rumah'];
 
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
 const MEAL_LABELS = ['Siang','Malam'];
 // v2.1.3: login utama email/password; Magic Link tetap ada untuk email yang sudah terdaftar
-mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
 
 const $ = (id) => document.getElementById(id);
 const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean);
@@ -397,6 +394,24 @@ async function loadAll(){
   cookLog = cl.error ? [] : (cl.data || []);
   if(cl.error) console.warn('cook_log belum tersedia (jalankan migrasi SQL):', cl.error.message);
 
+  // --- Cloud sync: view history, meal plan, collections ---
+  try {
+    const vh = await db.from('recipe_view_history').select('recipe_id').order('viewed_at',{ascending:false}).limit(10);
+    recipeHistory = vh.error ? [] : (vh.data || []).map(r => r.recipe_id);
+  } catch(e){ console.warn('recipe_view_history belum tersedia:', e.message); }
+
+  try {
+    const mp = await db.from('user_meal_plans').select('plan_data').eq('user_id', currentUser.id).single();
+    mealPlan = (mp.error || !mp.data) ? [] : (mp.data.plan_data || []);
+    mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
+  } catch(e){ console.warn('user_meal_plans belum tersedia:', e.message); mealPlan = []; }
+
+  try {
+    const uc = await db.from('user_collections').select('collection_name, recipe_ids').eq('user_id', currentUser.id);
+    recipeCollections = {};
+    if(!uc.error && uc.data) uc.data.forEach(row => { recipeCollections[row.collection_name] = row.recipe_ids || []; });
+  } catch(e){ console.warn('user_collections belum tersedia:', e.message); recipeCollections = {}; }
+
   render();
 }
 
@@ -656,7 +671,9 @@ window.viewRecipe = (id) => {
   const r = recipes.find(x=>x.id===id);
   if(!r) return alert('Resep tidak ditemukan.');
   recipeHistory = [id, ...recipeHistory.filter(x=>x!==id)].slice(0,10);
-  try { localStorage.setItem('recipeHistory', JSON.stringify(recipeHistory)); } catch(e){}
+  if(db && currentUser) {
+    db.from('recipe_view_history').upsert({ user_id: currentUser.id, recipe_id: id, viewed_at: new Date().toISOString() }, { onConflict: 'user_id,recipe_id' }).then(() => {}).catch(e => console.error('Gagal simpan riwayat:', e));
+  }
 
   const allPhotos = [r.foto_url, ...(Array.isArray(r.foto_urls) ? r.foto_urls : [])].filter(Boolean);
   detailPhotoUrls = allPhotos;
@@ -956,8 +973,15 @@ function formatPlanDate(dateObj){
   return dateObj.toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
 }
 
-function saveMealPlan(){
-  try { localStorage.setItem('mealPlanV210', JSON.stringify(mealPlan)); } catch(e){}
+async function saveMealPlan(){
+  if(!db || !currentUser) return;
+  try {
+    await db.from('user_meal_plans').upsert({
+      user_id: currentUser.id,
+      plan_data: mealPlan,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+  } catch(e){ console.error('Gagal simpan meal plan:', e); }
 }
 
 function buildPlanText(){
@@ -1164,7 +1188,7 @@ function renderMealPlan(){
   }
 
   const totalMenus = mealPlan.reduce((s,d)=>s+d.meals.length,0);
-  let html = `<div class="plan-summary">✅ ${mealPlan.length} hari · ${totalMenus} menu · otomatis tersimpan di HP/browser ini</div>`;
+  let html = `<div class="plan-summary">✅ ${mealPlan.length} hari · ${totalMenus} menu · otomatis tersimpan di cloud</div>`;
   html += '<div class="plan-grid">';
   mealPlan.forEach(d => {
     const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
@@ -1725,8 +1749,19 @@ function renderHistory(){
 
 /* ========== BACKUP / COLLECTIONS / PRINT ========== */
 
-function saveCollections(){
-  try { localStorage.setItem('recipeCollectionsV210', JSON.stringify(recipeCollections)); } catch(e){}
+async function saveCollections(){
+  if(!db || !currentUser) return;
+  try {
+    const rows = Object.entries(recipeCollections).map(([name, ids]) => ({
+      user_id: currentUser.id,
+      collection_name: name,
+      recipe_ids: Array.isArray(ids) ? ids : [],
+      updated_at: new Date().toISOString()
+    }));
+    // Hapus semua koleksi user lalu insert ulang (atomic replace)
+    await db.from('user_collections').delete().eq('user_id', currentUser.id);
+    if(rows.length) await db.from('user_collections').insert(rows);
+  } catch(e){ console.error('Gagal simpan koleksi:', e); }
 }
 
 function ensureDefaultCollections(){
@@ -1886,7 +1921,7 @@ window.importDataBackup = async () => {
   if(!requireLogin()) return;
   const file = $('importDataFile')?.files?.[0];
   if(!file) return setBackupStatus('Pilih file backup JSON dulu.', 'error');
-  if(!confirm('Import backup akan menambahkan resep yang belum ada dan mengganti data lokal seperti koleksi/jadwal. Lanjut?')) return;
+  if(!confirm('Import backup akan menambahkan resep yang belum ada dan mengganti data koleksi/jadwal di cloud. Lanjut?')) return;
   try {
     setBackupStatus('⏳ Membaca file backup...', 'loading');
     const text = await file.text();
@@ -1897,7 +1932,14 @@ window.importDataBackup = async () => {
       mealPlan = data.mealPlan.map(d => ({...d, meals:(d.meals||[]).map(m => ({...m, recipeId: mapId(m.recipeId)}))}));
       saveMealPlan();
     }
-    if(Array.isArray(data.recipeHistory)){ recipeHistory = data.recipeHistory.map(mapId); localStorage.setItem('recipeHistory', JSON.stringify(recipeHistory)); }
+    if(Array.isArray(data.recipeHistory)){
+      recipeHistory = data.recipeHistory.map(mapId);
+      if(db && currentUser) {
+        for(const rid of recipeHistory) {
+          await db.from('recipe_view_history').upsert({ user_id: currentUser.id, recipe_id: rid, viewed_at: new Date().toISOString() }, { onConflict: 'user_id,recipe_id' }).catch(()=>{});
+        }
+      }
+    }
     if(data.recipeCollections && typeof data.recipeCollections === 'object'){
       recipeCollections = {};
       Object.entries(data.recipeCollections).forEach(([name, ids]) => {
