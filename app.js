@@ -16,7 +16,7 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
 // v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
 // v2.3.5: Card foto kembali square 16:16 dan filter koleksi ditambahkan di halaman resep.
-// v3.1.1: Hard modern light UI override and cache-busting — cleaner app shell, premium cards, capture-first input, refined Family Hub.
+// v3.1.2: Force Light Modern UI — prevents system dark mode and legacy dark/brown styles from taking over.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -1916,7 +1916,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga',
-    version: '3.1.1',
+    version: '3.1.2',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
