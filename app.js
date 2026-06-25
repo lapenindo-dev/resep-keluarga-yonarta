@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.0
+   Resep Keluarga v3.0.1
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -16,7 +16,7 @@ const PHOTO_BUCKET = 'recipe-photos';
 // v2.2.2: Tambah penulis, tanggal dibuat, dan terakhir edit.
 // v2.2.4: Label input dipersingkat dan Foto Utama diberi border halus.
 // v2.3.5: Card foto kembali square 16:16 dan filter koleksi ditambahkan di halaman resep.
-// v3.0: Dibangun mengikuti Master Product Bible Vol. 1, 2, dan 3: Family Hub drawer, bottom nav 5 item, warm utility UI, dan trust-first UX.
+// v3.0.1: MPB alignment fix — Family Hub drawer, bottom nav 5 item, compact recipe cards, progressive recipe form.
 // Isi email admin di bawah kalau suatu hari mau membuka panel backup admin.
 // Contoh: const ADMIN_EMAILS = ['nama@email.com'];
 const ADMIN_EMAILS = [];
@@ -147,6 +147,8 @@ function closeFamilyHub(){
   if(backdrop) backdrop.setAttribute('aria-hidden','true');
 }
 
+window.openFamilyHub = openFamilyHub;
+window.closeFamilyHub = closeFamilyHub;
 
 async function initAuth(){
   if(!db){
@@ -496,9 +498,8 @@ function recipeCard(r){
     </div>
     <div class="recipe-info">
       <h3>${escapeHtml(r.nama_resep)}</h3>
-      <p class="recipe-meta">${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')}${r.durasi_menit ? ' · ' + escapeHtml(r.durasi_menit) + ' menit' : ''}</p>
-      <div class="stars">${stars(r.rating_keluarga)}</div>
-      ${collectionPillsHtml(r.id)}
+      <p class="recipe-meta">${escapeHtml(r.bahan_utama || '-')} · ${escapeHtml(r.jenis_hidangan || '-')}</p>
+      <div class="stars compact-stars">${Number(r.rating_keluarga||0) ? stars(r.rating_keluarga) : ''}</div>
       <div class="card-actions" onclick="event.stopPropagation()">
         <button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button>
         <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button>
@@ -974,6 +975,7 @@ function resetForm(){
   if(banner){ banner.className='page-mode-banner add-mode'; banner.innerHTML='<span>➕ Simpan Resep Keluarga</span><small>Catat resep hari ini supaya tetap hidup untuk anak cucu.</small>'; }
   if($('penulis_nama')) $('penulis_nama').value='';
   if($('sumber_resep')) $('sumber_resep').value='Keluarga';
+  document.body.classList.remove('show-advanced-form');
   document.querySelectorAll('.capture-choice').forEach(btn=>btn.classList.toggle('active', btn.dataset.sourceChoice === 'Keluarga'));
   $('rating_keluarga').value=0;
   setPhotoPreview(null);
@@ -1908,7 +1910,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga',
-    version: '3.0.0',
+    version: '3.0.1',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1919,7 +1921,7 @@ window.exportDataBackup = () => {
     recipeCollections
   };
   const date = new Date().toISOString().slice(0,10);
-  downloadTextFile(`resep-keluarga-keluarga-backup-${date}.json`, JSON.stringify(payload, null, 2));
+  downloadTextFile(`resep-keluarga-yonarta-backup-${date}.json`, JSON.stringify(payload, null, 2));
   setBackupStatus('✅ Backup JSON berhasil dibuat.', 'success');
 };
 
@@ -2011,7 +2013,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.0</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.0.1</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2029,6 +2031,7 @@ window.printRecipe = (id) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   initBrowserBackGuard();
+  if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations?.().then(regs => regs.forEach(r => r.update())).catch(()=>{}); }
   if($('loginPasswordBtn')) $('loginPasswordBtn').addEventListener('click', loginWithPassword);
   if($('loginBtn')) $('loginBtn').addEventListener('click', sendLoginEmail);
   if($('loginEmail')) $('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loginWithPassword(); });
@@ -2036,6 +2039,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if($('logoutBtn')) $('logoutBtn').addEventListener('click', logout);
   if($('shareAppBtn')) $('shareAppBtn').addEventListener('click', shareApp);
   if($('shareAppHomeBtn')) $('shareAppHomeBtn').addEventListener('click', shareApp);
+  if($('openHubBtn')) $('openHubBtn').addEventListener('click', openFamilyHub);
+  if($('closeHubBtn')) $('closeHubBtn').addEventListener('click', closeFamilyHub);
+  if($('drawerBackdrop')) $('drawerBackdrop').addEventListener('click', closeFamilyHub);
+  if($('settingsLogoutBtn')) $('settingsLogoutBtn').addEventListener('click', logout);
+  if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').addEventListener('click', () => {
+    document.body.classList.toggle('show-advanced-form');
+    $('toggleAdvancedFormBtn').textContent = document.body.classList.contains('show-advanced-form') ? 'Sembunyikan detail opsional' : 'Lengkapi detail opsional';
+  });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeFamilyHub(); });
 
   // Navigation
   document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
@@ -2096,6 +2108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.capture-choice').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');
     if($('sumber_resep')) $('sumber_resep').value = btn.dataset.sourceChoice || 'Keluarga';
+    if($('aiTextSource')) $('aiTextSource').value = btn.dataset.sourceChoice || 'Keluarga';
   }));
 
   // Recipe form
@@ -2123,7 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Backup / collections / print tools
   if($('exportDataBtn')) $('exportDataBtn').addEventListener('click', exportDataBackup);
   if($('importDataBtn')) $('importDataBtn').addEventListener('click', importDataBackup);
-  if($('collectionForm')) $('collectionForm').addEventListener('submit', (e)=>{ e.preventDefault(); const name=$('collectionName').value.trim(); if(!name) return; if(!recipeCollections[name]) recipeCollections[name]=[]; saveCollections(); $('collectionForm').reset(); renderCollections(); renderDashboard(); renderV3SecondaryPages(); });
+  if($('collectionForm')) $('collectionForm').addEventListener('submit', (e)=>{ e.preventDefault(); const name=$('collectionName').value.trim(); if(!name) return; if(!recipeCollections[name]) recipeCollections[name]=[]; saveCollections(); $('collectionForm').reset(); renderCollections(); renderDashboard(); });
 
   // Random recipe
   $('randomRecipeBtn').addEventListener('click', ()=>{
@@ -2205,5 +2218,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga v3.0 loaded');
+  console.log('✅ Resep Keluarga v3.0.1 loaded');
 });
