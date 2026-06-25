@@ -4,8 +4,8 @@
   "description": "Simpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7EFE0",
-  "theme_color": "#8B5E34",
+  "background_color": "#F7F2EA",
+  "theme_color": "#F7F2EA",
   "orientation": "portrait",
   "categories": ["food"],
   "icons": [

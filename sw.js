@@ -1,9 +1,9 @@
-const CACHE_NAME = 'resep-keluarga-v3.0.2';
+const CACHE_NAME = 'resep-keluarga-v3.1.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/style.css?v=3.0.2',
-  '/app.js?v=3.0.2',
+  '/style.css?v=3.1.0',
+  '/app.js?v=3.1.0',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
