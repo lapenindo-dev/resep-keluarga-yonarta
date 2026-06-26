@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga v3.9.10</title>
+  <title>Resep Keluarga v3.9.11</title>
   <meta name="theme-color" content="#FAFAF9" />
+  <meta name="color-scheme" content="light" />
   <meta name="description" content="Buku resep keluarga digital untuk menyimpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -14,9 +15,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3.9.10-login-unblock" />
+  <link rel="stylesheet" href="style.css?v=3.9.11-tabs-light-settings" />
   <style id="rk-v390-critical">
-    html{color-scheme:light!important;background:#FAFAF9!important}body{background:#FAFAF9!important;color:#111827!important}*{box-sizing:border-box}
+    html{color-scheme:only light!important;background:#FAFAF9!important}body{background:#FAFAF9!important;color:#111827!important}*{box-sizing:border-box}
   </style>
 </head>
 <body class="auth-locked">
@@ -237,13 +238,13 @@
       </div>
 
       <div class="capture-methods" aria-label="Pilih cara tambah resep">
-        <button class="capture-method ai-tab active" data-aitab="photo-caption" type="button">
+        <button class="capture-method ai-tab active" data-aitab="photo-caption" type="button" onclick="selectAiTab('photo-caption')">
           <span><svg class="rk-icon"><use href="#i-camera"></use></svg></span><b>Scan Foto</b><small>Dari foto</small>
         </button>
-        <button class="capture-method ai-tab" data-aitab="caption-text" type="button">
+        <button class="capture-method ai-tab" data-aitab="caption-text" type="button" onclick="selectAiTab('caption-text')">
           <span><svg class="rk-icon"><use href="#i-text"></use></svg></span><b>Caption</b><small>Dari teks</small>
         </button>
-        <button class="capture-method ai-tab" data-aitab="manual" type="button">
+        <button class="capture-method ai-tab" data-aitab="manual" type="button" onclick="selectAiTab('manual')">
           <span><svg class="rk-icon"><use href="#i-edit"></use></svg></span><b>Manual</b><small>Tulis sendiri</small>
         </button>
       </div>
@@ -516,10 +517,10 @@
       <h2>Settings</h2>
       <p class="muted">Akun, logout, backup, dan status privasi.</p>
       <div class="tool-card account-card"><h3>Akun aktif</h3><p id="settingsAccountText" class="muted">-</p><button id="settingsLogoutBtn" class="danger wide" type="button">Logout</button></div>
-      <div class="trust-state-grid">
-        <div class="trust-state-card"><b>Light mode</b><span>Default bersih dan stabil</span></div>
-        <div class="trust-state-card"><b>Family Hub</b><span>Fitur sekunder tetap tertata</span></div>
-        <div class="trust-state-card"><b>Backup</b><span>Buka Hub → Backup</span></div>
+      <div class="trust-state-grid settings-action-grid">
+        <button class="trust-state-card settings-action-card" type="button" id="forceLightModeBtn"><b>Light mode</b><span>Aktif permanen. Tampilan gelap device diabaikan.</span></button>
+        <button class="trust-state-card settings-action-card" type="button" id="openHubFromSettingsBtn"><b>Family Hub</b><span>Buka drawer fitur sekunder keluarga.</span></button>
+        <button class="trust-state-card settings-action-card" type="button" data-go="backup"><b>Backup</b><span>Buka halaman export / restore data akun.</span></button>
       </div>
     </section>
 
@@ -560,10 +561,10 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.9.10-login-unblock"></script>
+  <script src="app.js?v=3.9.11-tabs-light-settings"></script>
   <script>
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js?v=3.9.10-login-unblock').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
+      navigator.serviceWorker.register('/sw.js?v=3.9.11-tabs-light-settings').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
     }
   </script>
 </body>

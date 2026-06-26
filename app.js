@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.9.10
+   Resep Keluarga v3.9.11
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -1116,8 +1116,7 @@ function resetForm(){
   if($('sumber_resep')) $('sumber_resep').value='Keluarga';
   document.body.classList.remove('show-advanced-form');
   if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').textContent = 'Detail tambahan';
-  document.querySelectorAll('.ai-tab').forEach(t=>t.classList.toggle('active', t.dataset.aitab === 'photo-caption'));
-  document.querySelectorAll('.ai-panel').forEach(p=>p.classList.toggle('active', p.dataset.aipanel === 'photo-caption'));
+  selectAiTab('photo-caption');
   document.querySelectorAll('.capture-choice').forEach(btn=>btn.classList.toggle('active', btn.dataset.sourceChoice === 'Keluarga'));
   $('rating_keluarga').value=0;
   setPhotoPreview(null);
@@ -1672,15 +1671,47 @@ async function handleAiExtractText(){
   }
 }
 
+function enforceLightMode(){
+  document.documentElement.style.colorScheme = 'only light';
+  document.documentElement.dataset.theme = 'light';
+  document.body?.classList.remove('dark','dark-mode','theme-dark');
+  try {
+    localStorage.setItem('rk-theme', 'light');
+    localStorage.setItem('theme', 'light');
+    localStorage.setItem('color-theme', 'light');
+  } catch(e){}
+}
+
+window.selectAiTab = function(name){
+  const targetName = name || 'photo-caption';
+  const targetPanel = document.querySelector(`.ai-panel[data-aipanel="${targetName}"]`);
+  if(!targetPanel) return;
+  document.querySelectorAll('.ai-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.aitab === targetName);
+    t.setAttribute('aria-selected', t.dataset.aitab === targetName ? 'true' : 'false');
+  });
+  document.querySelectorAll('.ai-panel').forEach(p => {
+    p.classList.toggle('active', p.dataset.aipanel === targetName);
+    p.hidden = p.dataset.aipanel !== targetName;
+  });
+  setAiStatus(null);
+  if(targetName === 'manual') setTimeout(() => $('nama_resep')?.focus(), 80);
+};
+
 function setupAiTabs(){
+  document.querySelectorAll('.ai-panel').forEach(p => { p.hidden = !p.classList.contains('active'); });
   document.querySelectorAll('.ai-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.ai-tab').forEach(t=>t.classList.remove('active'));
-      document.querySelectorAll('.ai-panel').forEach(p=>p.classList.remove('active'));
-      tab.classList.add('active');
-      document.querySelector(`.ai-panel[data-aipanel="${tab.dataset.aitab}"]`).classList.add('active');
-      setAiStatus(null);
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', tab.classList.contains('active') ? 'true' : 'false');
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectAiTab(tab.dataset.aitab);
     });
+  });
+  document.querySelector('.capture-methods')?.addEventListener('click', (e) => {
+    const tab = e.target.closest('.ai-tab');
+    if(tab) selectAiTab(tab.dataset.aitab);
   });
 }
 
@@ -2157,7 +2188,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.10</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.11</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2174,6 +2205,7 @@ window.printRecipe = (id) => {
 /* ========== INIT — all event handlers ========== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  enforceLightMode();
   initBrowserBackGuard();
   if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations?.().then(regs => regs.forEach(r => r.update())).catch(()=>{}); }
   if($('loginPasswordBtn')) $('loginPasswordBtn').addEventListener('click', loginWithPassword);
@@ -2187,6 +2219,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if($('closeHubBtn')) $('closeHubBtn').addEventListener('click', closeFamilyHub);
   if($('drawerBackdrop')) $('drawerBackdrop').addEventListener('click', closeFamilyHub);
   if($('settingsLogoutBtn')) $('settingsLogoutBtn').addEventListener('click', logout);
+  if($('forceLightModeBtn')) $('forceLightModeBtn').addEventListener('click', () => { enforceLightMode(); showToast('Light mode sudah dikunci.', 'success'); });
+  if($('openHubFromSettingsBtn')) $('openHubFromSettingsBtn').addEventListener('click', openFamilyHub);
   if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').addEventListener('click', () => {
     document.body.classList.toggle('show-advanced-form');
     $('toggleAdvancedFormBtn').textContent = document.body.classList.contains('show-advanced-form') ? 'Sembunyikan detail opsional' : 'Detail opsional';
@@ -2362,5 +2396,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.10 login session fix loaded');
+  console.log('Resep Keluarga v3.9.11 login session fix loaded');
 });

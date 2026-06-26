@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-keluarga-v3.9.10-login-unblock';
+const CACHE_NAME = 'resep-keluarga-v3.9.11-tabs-light-settings';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
