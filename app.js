@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.9.13
+   Resep Keluarga v3.9.31
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -10,7 +10,7 @@ let db;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
 catch(e){ console.error('Supabase init gagal:', e); }
 const PHOTO_BUCKET = 'recipe-photos';
-const APP_VERSION = '3.9.29';
+const APP_VERSION = '3.9.30';
 // v2.1.9: posisi Bantu Isi Resep dipindah di bawah Foto Resep / Tambahan.
 // v2.2.0: Foto Masakan dibuat responsive agar selalu rapi mengikuti lebar device.
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
@@ -64,7 +64,7 @@ const appSettings = {
 function loadAppSettings(){
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    if(saved.recipeViewMode === 'grid' || saved.recipeViewMode === 'list') appSettings.recipeViewMode = saved.recipeViewMode;
+    appSettings.recipeViewMode = 'list';
   } catch(e){ appSettings.recipeViewMode = 'list'; }
   applyRecipeViewMode();
 }
@@ -74,22 +74,23 @@ function saveAppSettings(){
 }
 
 function applyRecipeViewMode(){
-  document.body.classList.toggle('recipe-view-grid', appSettings.recipeViewMode === 'grid');
-  document.body.classList.toggle('recipe-view-list', appSettings.recipeViewMode !== 'grid');
+  document.body.classList.remove('recipe-view-grid');
+  document.body.classList.add('recipe-view-list');
+  appSettings.recipeViewMode = 'list';
   const listBtn = $('recipeViewListBtn');
   const gridBtn = $('recipeViewGridBtn');
   if(listBtn){ listBtn.classList.toggle('active', appSettings.recipeViewMode !== 'grid'); listBtn.setAttribute('aria-checked', appSettings.recipeViewMode !== 'grid' ? 'true' : 'false'); }
   if(gridBtn){ gridBtn.classList.toggle('active', appSettings.recipeViewMode === 'grid'); gridBtn.setAttribute('aria-checked', appSettings.recipeViewMode === 'grid' ? 'true' : 'false'); }
   const list = $('recipeList');
-  if(list){ list.classList.toggle('recipe-grid-list', appSettings.recipeViewMode === 'grid'); list.classList.toggle('recipe-single-list', appSettings.recipeViewMode !== 'grid'); }
+  if(list){ list.classList.remove('recipe-grid-list'); list.classList.add('recipe-single-list'); }
 }
 
 function setRecipeViewMode(mode){
-  appSettings.recipeViewMode = mode === 'grid' ? 'grid' : 'list';
+  appSettings.recipeViewMode = 'list';
   saveAppSettings();
   applyRecipeViewMode();
   renderRecipes();
-  showToast(appSettings.recipeViewMode === 'grid' ? '2 resep per baris aktif.' : '1 resep per baris aktif.', 'success');
+  showToast('Tampilan resep: 1 per baris.', 'success');
 }
 window.setRecipeViewMode = setRecipeViewMode;
 // v2.1.3: login utama email/password; Magic Link tetap ada untuk email yang sudah terdaftar
@@ -306,13 +307,15 @@ async function initAuth(){
       renderAuthState();
       if(currentUser){
         setAuthStatus(null);
-        go('home', { replace:true });
+        const restorePage = pageFromHash() || loadLastPage() || 'home';
+        go(restorePage, { replace:true, keepAiPanel:true });
         loadAllSafe('auth-change');
       }
     });
     if(currentUser){
       setAuthStatus(null);
-      go('home', { replace:true });
+      const restorePage = pageFromHash() || loadLastPage() || 'home';
+      go(restorePage, { replace:true, keepAiPanel:true });
       loadAllSafe('init-session');
     } else {
       setAuthStatus('Silakan login dulu untuk membuka resep keluarga.', 'loading');
@@ -493,6 +496,12 @@ window.removeExtraPhoto = (i) => {
 let navHistory = ['home'];
 let currentPage = 'home';
 let browserBackReady = false;
+const RK_LAST_PAGE_KEY = 'rk-last-page-v1';
+const RK_STATIC_PAGES = ['home','recipes','add','plan','collections','settings','family','warisan','gallery','shopping','backup','sharing','ai-assistant','help','privacy','detail'];
+function isValidAppPage(page){ return RK_STATIC_PAGES.includes(page) && !!$(page); }
+function pageFromHash(){ const page = decodeURIComponent((window.location.hash || '').replace(/^#/, '') || ''); return isValidAppPage(page) ? page : ''; }
+function saveLastPage(page){ if(isValidAppPage(page)) { try { sessionStorage.setItem(RK_LAST_PAGE_KEY, page); } catch(e){} } }
+function loadLastPage(){ try { const page = sessionStorage.getItem(RK_LAST_PAGE_KEY) || ''; return isValidAppPage(page) ? page : ''; } catch(e){ return ''; } }
 
 function pushAppBrowserState(page, replace=false){
   if(!window.history || !window.history.pushState) return;
@@ -508,8 +517,10 @@ function pushAppBrowserState(page, replace=false){
 function initBrowserBackGuard(){
   if(browserBackReady || !window.history || !window.history.pushState) return;
   browserBackReady = true;
-  pushAppBrowserState('home', true);
-  pushAppBrowserState('home', false);
+  const initialPage = pageFromHash() || loadLastPage() || 'home';
+  navHistory = initialPage === 'home' ? ['home'] : ['home', initialPage];
+  pushAppBrowserState(initialPage, true);
+  if(initialPage !== 'home') go(initialPage, { skipHistory: true, skipBrowser: true, keepAiPanel: true });
   window.addEventListener('popstate', (event) => {
     if(photoViewerOpen){
       closePhotoViewer({ skipBrowser: true });
@@ -534,6 +545,7 @@ function go(page, opts={}){
   const el = $(page);
   if(el) el.classList.add('active');
   currentPage = page;
+  saveLastPage(page);
   document.querySelectorAll('[data-go]').forEach(b=>b.classList.toggle('active', b.dataset.go===page));
   if(page === 'add' && !opts.keepAiPanel) clearAiPanel();
   if(page === 'add'){
@@ -639,6 +651,16 @@ function render(){
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
   renderCollectionFilterChips(); renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
   renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory(); renderMealPlan(); renderCollections(); renderV3SecondaryPages(); renderTrustIdentity();
+  restoreDetailAfterRefresh();
+}
+
+function restoreDetailAfterRefresh(){
+  if(currentPage !== 'detail') return;
+  if($('recipeDetail') && $('recipeDetail').innerHTML.trim()) return;
+  let id = '';
+  try { id = sessionStorage.getItem('rk-last-recipe-id-v1') || ''; } catch(e){}
+  if(id && recipes.some(r => r.id === id)){ viewRecipe(id); return; }
+  go('recipes', { skipHistory:true, keepAiPanel:true });
 }
 
 function renderCookNameOptions(){
@@ -679,7 +701,7 @@ function sourceIcon(src){
 
 function recipeCard(r){
   const fav = isFavoriteRecipe(r);
-  const photoStyle = r.foto_url ? `<img src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" loading="lazy" />` : `<div class="recipe-photo-fallback"><span>${sourceIcon(r.sumber_resep)}</span></div>`;
+  const photoStyle = r.foto_url ? `<img src="${r.foto_url}" alt="Foto ${escapeHtml(r.nama_resep)}" loading="lazy" onclick="event.stopPropagation();openPhotoViewerBySrc(this.src)" />` : `<div class="recipe-photo-fallback"><span>${sourceIcon(r.sumber_resep)}</span></div>`;
   const source = normalizeRecipeSource(r.sumber_resep);
   const duration = r.durasi_menit ? `${escapeHtml(r.durasi_menit)} mnt` : '';
   const type = r.jenis_hidangan || r.bahan_utama || '';
@@ -893,6 +915,7 @@ function setupPhotoViewerEvents(){
 /* ---------- Recipe detail ---------- */
 
 window.viewRecipe = (id) => {
+  try { sessionStorage.setItem('rk-last-recipe-id-v1', id); } catch(e){}
   const r = recipes.find(x=>x.id===id);
   if(!r) return alert('Resep tidak ditemukan.');
   recipeHistory = [id, ...recipeHistory.filter(x=>x!==id)].slice(0,10);
@@ -914,7 +937,7 @@ window.viewRecipe = (id) => {
       <span class="zoom-hint">Foto resep</span>
     </div>`;
     if(allPhotos.length > 1){
-      photoBlock += `<div class="photo-thumbs">${allPhotos.map((url,i)=>`<img src="${url}" class="thumb${i===0?' active':''}" onclick="selectDetailPhoto(${i})" ondblclick="openPhotoViewer(${i})" title="Ketuk untuk pilih, tap 2x untuk zoom" />`).join('')}</div>`;
+      photoBlock += `<div class="photo-thumbs">${allPhotos.map((url,i)=>`<img src="${url}" class="thumb${i===0?' active':''}" onclick="selectDetailPhoto(${i});openPhotoViewer(${i})" title="Ketuk untuk zoom" />`).join('')}</div>`;
     }
   } else {
     photoBlock = `<div class="detail-no-photo"><div class="detail-floating-actions"><button onclick="goBack()" title="Kembali" type="button">${rkIcon('i-back')}</button><button onclick='shareRecipe("${r.id}")' title="Bagikan resep" type="button">${rkIcon('i-share')}</button><button onclick='editRecipe("${r.id}")' title="Edit resep" type="button">${rkIcon('i-edit')}</button></div><b>Belum ada foto utama</b><span>Tambahkan foto agar resep lebih mudah dikenali keluarga.</span><button class="secondary small" onclick='editRecipe("${r.id}")'>Tambah Foto</button></div>`;
@@ -978,7 +1001,7 @@ window.viewRecipe = (id) => {
         ${allPhotos.length ? `<h3>Foto</h3><div class="detail-photo-grid">${allPhotos.map((url,i)=>`<img src="${url}" onclick="openPhotoViewer(${i})" alt="Foto resep ${i+1}" />`).join('')}</div>` : ''}
       </div>
       <div class="actions detail-actions">
-        <button class="primary" onclick='markAsCooked("${r.id}")'>Sudah Dimasak</button>
+        <button class="primary" onclick='markAsCooked("${r.id}")'>Dimasak</button>
         <button class="secondary edit-mode-btn" onclick='editRecipe("${r.id}")'>Edit</button>
         <button class="ghost" onclick='printRecipe("${r.id}")'>PDF</button>
         <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button>
@@ -1836,7 +1859,7 @@ async function openLiveCamera(event){
   showNativeCameraFallback(false);
 
   if(!window.isSecureContext){
-    setAiStatus('Kamera live butuh HTTPS. Membuka Kamera HP sebagai cadangan.', 'error');
+    setAiStatus('Kamera live butuh HTTPS. Membuka galeri sebagai cadangan.', 'error');
     showNativeCameraFallback(true);
     openCameraPickerFallback();
     liveCameraOpening = false;
@@ -1845,7 +1868,7 @@ async function openLiveCamera(event){
   }
 
   if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function'){
-    setAiStatus('Kamera live tidak didukung browser ini. Membuka Kamera HP sebagai cadangan.', 'error');
+    setAiStatus('Kamera live tidak didukung browser ini. Membuka galeri sebagai cadangan.', 'error');
     showNativeCameraFallback(true);
     openCameraPickerFallback();
     liveCameraOpening = false;
@@ -2472,14 +2495,14 @@ function renderCollections(){
   el.innerHTML = names.map(name => {
     const ids = recipeCollections[name] || [];
     const rows = ids.map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(r => `
-      <div class="collection-recipe-row">
-        <span onclick='viewRecipe("${r.id}")'>${escapeHtml(r.nama_resep)}</span>
-        <button class="ghost small" onclick='removeRecipeFromCollection(decodeURIComponent("${encArg(name)}"),"${r.id}")'>${rkIcon('i-close')}</button>
+      <div class="collection-recipe-row" role="button" tabindex="0" onclick='viewRecipe("${r.id}")' onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}") }'>
+        <span class="collection-recipe-name">${escapeHtml(r.nama_resep)}</span>
+        <button class="ghost small collection-remove-recipe" onclick='event.stopPropagation();removeRecipeFromCollection(decodeURIComponent("${encArg(name)}"),"${r.id}")' aria-label="Hapus resep dari koleksi">${rkIcon('i-close')}</button>
       </div>`).join('');
     return `<div class="item compact collection-card">
       <div class="collection-head">
-        <div><h3>${rkIcon('i-layers')} ${escapeHtml(name)}</h3><p>${ids.length} resep</p></div>
-        <button class="danger small" onclick='deleteCollection(decodeURIComponent("${encArg(name)}"))'>Hapus</button>
+        <div class="collection-title-wrap"><h3>${rkIcon('i-layers')} ${escapeHtml(name)}</h3><p>${ids.length} resep</p></div>
+        <button class="danger small collection-delete-btn" onclick='deleteCollection(decodeURIComponent("${encArg(name)}"))'>Hapus</button>
       </div>
       <div class="collection-recipe-list">${rows || '<p class="muted">Belum ada resep di koleksi ini.</p>'}</div>
     </div>`;
@@ -2511,7 +2534,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga',
-    version: '3.9.10',
+    version: '3.9.31',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -2606,17 +2629,45 @@ function buildPrintableRecipeHtml(r){
   const bahan = ingredientsDetailHtml(r.bahan);
   const steps = listStepsHtml(r.cara_memasak);
   const tags = Array.isArray(r.tag) ? r.tag.join(', ') : '';
-  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${escapeHtml(r.nama_resep)}</title>
-  <style>body{font-family:Arial,sans-serif;color:#222;padding:28px;line-height:1.5}h1{margin:0 0 6px}h2{margin-top:24px;border-bottom:1px solid #ddd;padding-bottom:6px}.meta{color:#666;margin-bottom:18px}.box{border:1px solid #ddd;border-radius:10px;padding:14px;margin:12px 0}ul,ol{padding-left:22px}.note{white-space:pre-wrap;background:#fafafa;padding:12px;border-radius:8px}.footer{margin-top:28px;color:#777;font-size:12px}@media print{button{display:none}}</style></head><body>
-  <button onclick="window.print()">Print / Save PDF</button>
-  <h1>${escapeHtml(r.nama_resep)}</h1>
-  <div class="meta">${escapeHtml(r.bahan_utama||'-')} · ${escapeHtml(r.jenis_hidangan||'-')} · ${r.durasi_menit?escapeHtml(r.durasi_menit+' menit'):'-'} · ${r.porsi?escapeHtml(r.porsi+' porsi'):'-'}</div>
-  <div class="box"><b>Rating:</b> ${stars(r.rating_keluarga)}<br><b>Asal resep:</b> ${escapeHtml(normalizeRecipeSource(r.sumber_resep))}<br><b>Biasanya dimasak oleh:</b> ${escapeHtml(r.dimasak_oleh||'-')}<br><b>Resep dari:</b> ${escapeHtml(recipeAuthorName(r))}<br><b>Tanggal dibuat:</b> ${formatDateTimeID(r.created_at)}<br><b>Dirawat terakhir:</b> ${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}<br><b>Koleksi:</b> ${escapeHtml(collectionNamesForRecipe(r.id).join(', ')||'-')}</div>
-  <h2>Bahan</h2>${bahan}
-  <h2>Cara Memasak</h2>${steps}
-  <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.13</div>
-  <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
+  const allPhotos = [r.foto_url, ...(Array.isArray(r.foto_urls) ? r.foto_urls : [])].filter(Boolean).map(url => String(url));
+  const heroPhoto = allPhotos[0] || '';
+  const safeHero = heroPhoto ? heroPhoto.replace(/"/g, '&quot;') : '';
+  const source = normalizeRecipeSource(r.sumber_resep);
+  const metaLeft = [r.bahan_utama, r.jenis_hidangan, r.durasi_menit ? r.durasi_menit + ' menit' : '', r.porsi ? r.porsi + ' porsi' : ''].filter(Boolean).join(' · ');
+  const collectionText = collectionNamesForRecipe(r.id).join(', ') || '-';
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(r.nama_resep)}</title>
+  <style>
+    :root{--ink:#20231f;--muted:#74716a;--green:#17684c;--sage:#eaf5ee;--cream:#fbf7ef;--paper:#fffdf8;--terra:#b9653d;--line:#e9dfd1}
+    *{box-sizing:border-box} body{margin:0;background:var(--cream);color:var(--ink);font-family:"Plus Jakarta Sans",Inter,Arial,sans-serif;line-height:1.52;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .page{max-width:860px;margin:0 auto;padding:38px 42px 44px;background:var(--paper);min-height:100vh}
+    .brand{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px;border-bottom:1px solid var(--line);padding-bottom:16px}.brand b{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--green)}.brand span{font-size:12px;color:var(--muted)}
+    .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:28px;align-items:stretch;margin-bottom:24px}.hero-img{min-height:310px;border-radius:30px;background:linear-gradient(135deg,#e9f3ed,#fff0e3);overflow:hidden;border:1px solid var(--line);box-shadow:0 18px 44px rgba(60,42,24,.10)}.hero-img img{width:100%;height:100%;object-fit:cover;display:block}.hero-img.empty{display:grid;place-items:center;color:var(--green);font-weight:800;text-align:center;padding:22px}.hero-copy{padding:8px 0}.eyebrow{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:var(--sage);color:var(--green);font-size:12px;font-weight:800;margin-bottom:14px}.hero h1{margin:0 0 12px;font-size:42px;line-height:1.02;letter-spacing:-.045em;color:#171a16}.subtitle{margin:0 0 18px;color:var(--muted);font-size:15px}.meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.meta{padding:12px;border:1px solid var(--line);border-radius:17px;background:#fff}.meta small{display:block;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.meta strong{display:block;margin-top:4px;font-size:13px}.section{margin-top:22px;break-inside:avoid}.section h2{display:flex;align-items:center;gap:9px;margin:0 0 11px;font-size:20px;letter-spacing:-.02em}.section h2:before{content:"";width:9px;height:9px;border-radius:999px;background:var(--terra);box-shadow:14px 0 0 var(--green)}.content-card{padding:16px 18px;border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:0 8px 24px rgba(60,42,24,.04)}
+    ul,ol{margin:0;padding-left:22px}li{margin:0 0 8px}.grouped-ingredients b{display:block;margin:12px 0 6px;color:var(--green)}.grouped-ingredients b:first-child{margin-top:0}.steps li::marker{font-weight:800;color:var(--terra)}.note{white-space:pre-wrap;background:linear-gradient(135deg,#f5fbf7,#fff7ef);border-color:#ddebdc}.photo-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.photo-strip img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:15px;border:1px solid var(--line)}.footer{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:11px}.print-btn{position:fixed;top:14px;right:14px;border:0;border-radius:999px;background:var(--green);color:white;padding:11px 16px;font-weight:800;box-shadow:0 12px 28px rgba(23,104,76,.22)}
+    @media print{.print-btn{display:none}.page{max-width:none;min-height:auto;padding:22mm 18mm;background:#fff}.hero{grid-template-columns:1fr .9fr;gap:18px}.hero-img{min-height:88mm;border-radius:18px}.hero h1{font-size:30px}.content-card{box-shadow:none}.section{break-inside:avoid}.footer{break-inside:avoid}@page{size:A4;margin:0}}
+    @media(max-width:720px){.page{padding:24px 18px}.hero{grid-template-columns:1fr}.hero-img{min-height:240px}.hero h1{font-size:34px}.meta-grid{grid-template-columns:1fr 1fr}}
+  </style></head><body>
+  <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+  <main class="page">
+    <div class="brand"><b>Resep Keluarga</b><span>Simpan resep Mama hari ini, sebelum hanya tersisa kenangan.</span></div>
+    <section class="hero">
+      <div class="hero-img${safeHero ? '' : ' empty'}">${safeHero ? `<img src="${safeHero}" alt="Foto ${escapeHtml(r.nama_resep)}" referrerpolicy="no-referrer" />` : '<div>Foto keluarga belum tersedia</div>'}</div>
+      <div class="hero-copy"><div class="eyebrow">${escapeHtml(source)} · Family Recipe Heritage</div><h1>${escapeHtml(r.nama_resep)}</h1><p class="subtitle">${escapeHtml(metaLeft || 'Resep keluarga tersimpan rapi untuk diwariskan.')}</p>
+        <div class="meta-grid"><div class="meta"><small>Asal</small><strong>${escapeHtml(source)}</strong></div><div class="meta"><small>Dari</small><strong>${escapeHtml(recipeAuthorName(r))}</strong></div><div class="meta"><small>Rating</small><strong>${stars(r.rating_keluarga)}</strong></div><div class="meta"><small>Koleksi</small><strong>${escapeHtml(collectionText)}</strong></div></div>
+      </div>
+    </section>
+    <section class="section"><h2>Bahan</h2><div class="content-card grouped-ingredients">${bahan}</div></section>
+    <section class="section"><h2>Cara Memasak</h2><div class="content-card steps">${steps}</div></section>
+    <section class="section"><h2>Cerita di Balik Resep</h2><div class="content-card note">${escapeHtml(r.catatan_yonarta || 'Belum ada cerita. Tambahkan kenangan keluarga pada resep ini.')}</div></section>
+    ${allPhotos.length > 1 ? `<section class="section"><h2>Album Foto</h2><div class="photo-strip">${allPhotos.slice(1,9).map(url=>`<img src="${String(url).replace(/"/g,'&quot;')}" referrerpolicy="no-referrer" />`).join('')}</div></section>` : ''}
+    <div class="footer"><span>Tag: ${escapeHtml(tags || '-')}</span><span>Exported from Resep Keluarga v3.9.31</span></div>
+  </main>
+  <script>
+    async function waitImages(){
+      const imgs=[...document.images];
+      await Promise.all(imgs.map(img=>img.complete ? Promise.resolve() : new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;setTimeout(resolve,3500)})));
+    }
+    window.addEventListener('load',()=>{waitImages().then(()=>setTimeout(()=>window.print(),450));});
+  <\/script></body></html>`;
 }
 
 window.printRecipe = (id) => {
@@ -2694,8 +2745,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if($('settingsLogoutBtn')) $('settingsLogoutBtn').addEventListener('click', logout);
   if($('forceLightModeBtn')) $('forceLightModeBtn').addEventListener('click', () => { enforceLightMode(); showToast('Light mode sudah dikunci.', 'success'); });
   if($('openHubFromSettingsBtn')) $('openHubFromSettingsBtn').addEventListener('click', openFamilyHub);
-  if($('recipeViewListBtn')) $('recipeViewListBtn').addEventListener('click', () => setRecipeViewMode('list'));
-  if($('recipeViewGridBtn')) $('recipeViewGridBtn').addEventListener('click', () => setRecipeViewMode('grid'));
   if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').addEventListener('click', () => {
     const panel = document.querySelector('.advanced-fields-panel');
     const open = !panel?.classList.contains('open');
@@ -2877,7 +2926,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.29 professional camera and scraper fix loaded');
+  console.log('Resep Keluarga v3.9.30 camera viewer settings fix loaded');
 });
 
 /* v3.9.29 — verified robust mobile camera flow override */
@@ -2968,13 +3017,13 @@ async function openLiveCamera(event){
   const video = $('liveCameraVideo');
   try {
     if(!video){
-      setAiStatus('Panel kamera tidak ditemukan. Gunakan Kamera HP.', 'error');
+      setAiStatus('Panel kamera tidak ditemukan. Pilih dari galeri.', 'error');
       showNativeCameraFallback(true);
       return;
     }
     if(!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function'){
       showNativeCameraFallback(true);
-      setAiStatus('Kamera live tidak tersedia di browser ini. Membuka Kamera HP.', 'loading');
+      setAiStatus('Kamera live tidak tersedia di browser ini. Membuka galeri.', 'loading');
       openCameraPickerFallback(event);
       return;
     }
@@ -3002,7 +3051,7 @@ async function openLiveCamera(event){
     try { await video.play(); } catch(playErr){ console.warn('video.play warning:', playErr); }
     const ready = await waitForLiveVideoFrame(video, 5000);
     if(!ready){
-      setAiStatus('Kamera terbuka tapi preview belum siap. Tunggu 1 detik, atau gunakan Kamera HP.', 'loading');
+      setAiStatus('Kamera terbuka tapi preview belum siap. Tunggu 1 detik, atau gunakan galeri.', 'loading');
       return;
     }
     setAiStatus('Kamera siap. Arahkan ke resep lalu tekan Ambil Foto.', 'loading');
@@ -3012,7 +3061,7 @@ async function openLiveCamera(event){
     stopLiveCamera(false);
     setCameraPanelState(false);
     showNativeCameraFallback(true);
-    setAiStatus('Kamera live gagal dibuka. Tekan Kamera HP untuk mengambil foto.', 'error');
+    setAiStatus('Kamera live gagal dibuka. Tekan galeri untuk mengambil foto.', 'error');
   } finally {
     liveCameraOpening = false;
     if(openBtn){ openBtn.classList.remove('rk-working'); openBtn.disabled = false; }
@@ -3030,7 +3079,7 @@ async function captureLivePhoto(event){
   if(btn){ btn.classList.add('rk-working'); btn.disabled = true; }
   try {
     if(!video || !canvas || !video.srcObject){
-      setAiStatus('Kamera live belum aktif. Tekan Buka Kamera Live atau Kamera HP.', 'error');
+      setAiStatus('Kamera live belum aktif. Tekan Buka Kamera Live atau galeri.', 'error');
       showNativeCameraFallback(true);
       return;
     }
@@ -3057,7 +3106,7 @@ async function captureLivePhoto(event){
     setAiStatus('Foto kamera tersimpan. Tekan Baca & Rapikan.', 'success');
   } catch(err){
     console.error('Capture live photo error:', err);
-    setAiStatus('Foto kamera gagal disimpan. Coba ulangi atau gunakan Kamera HP.', 'error');
+    setAiStatus('Foto kamera gagal disimpan. Coba ulangi atau gunakan galeri.', 'error');
     showNativeCameraFallback(true);
   } finally {
     liveCameraCaptureInFlight = false;
@@ -3095,10 +3144,162 @@ function setupLiveCameraCapture(){
   const captureBtn = $('captureLivePhotoBtn');
   const retakeBtn = $('retakeLivePhotoBtn');
   if(openBtn && openBtn.dataset.rkBound !== '1') { openBtn.dataset.rkBound = '1'; openBtn.addEventListener('click', openLiveCamera); }
-  if(nativeBtn && nativeBtn.dataset.rkBound !== '1') { nativeBtn.dataset.rkBound = '1'; nativeBtn.addEventListener('click', (event) => { const opened = openCameraPickerFallback(event); setAiStatus(opened ? 'Kamera HP dibuka. Ambil foto lalu kembali ke app.' : 'Kamera HP tidak bisa dibuka. Pilih dari galeri.', opened ? 'loading' : 'error'); }); }
+  if(nativeBtn && nativeBtn.dataset.rkBound !== '1') { nativeBtn.dataset.rkBound = '1'; nativeBtn.addEventListener('click', (event) => { const opened = openCameraPickerFallback(event); setAiStatus(opened ? 'galeri dibuka. Ambil foto lalu kembali ke app.' : 'galeri tidak bisa dibuka. Pilih dari galeri.', opened ? 'loading' : 'error'); }); }
   if(stopBtn && stopBtn.dataset.rkBound !== '1') { stopBtn.dataset.rkBound = '1'; stopBtn.addEventListener('click', () => stopLiveCamera()); }
   if(captureBtn && captureBtn.dataset.rkBound !== '1') { captureBtn.dataset.rkBound = '1'; captureBtn.addEventListener('click', captureLivePhoto); captureBtn.disabled = true; }
   if(retakeBtn && retakeBtn.dataset.rkBound !== '1') { retakeBtn.dataset.rkBound = '1'; retakeBtn.addEventListener('click', openLiveCamera); }
+  window.addEventListener('pagehide', () => stopLiveCamera(false), { once:false });
+  window.addEventListener('beforeunload', () => stopLiveCamera(false), { once:false });
+}
+
+
+/* v3.9.30 — single live camera flow, no native camera button, no false warning after saved photo */
+function showNativeCameraFallback(show = true){
+  const btn = $('openNativeCameraBtn');
+  if(btn) btn.hidden = true;
+}
+
+function setCameraPanelState(open){
+  const panel = $('liveCameraPanel');
+  const openBtn = $('openLiveCameraBtn');
+  const stopBtn = $('stopLiveCameraBtn');
+  const savedState = $('liveCameraSavedState');
+  const captureBtn = $('captureLivePhotoBtn');
+  if(panel) panel.hidden = !open;
+  if(openBtn) openBtn.hidden = !!open;
+  if(stopBtn) stopBtn.hidden = !open;
+  if(captureBtn) captureBtn.disabled = !open;
+  if(open && savedState) savedState.hidden = true;
+}
+
+function waitForLiveVideoFrame(video, timeout = 5000){
+  return new Promise((resolve) => {
+    if(video?.readyState >= 2 && video.videoWidth && video.videoHeight) return resolve(true);
+    let done = false;
+    let timer;
+    const finish = (ok) => {
+      if(done) return;
+      done = true;
+      clearTimeout(timer);
+      video?.removeEventListener('loadedmetadata', onReady);
+      video?.removeEventListener('canplay', onReady);
+      video?.removeEventListener('playing', onReady);
+      resolve(!!ok);
+    };
+    const onReady = () => { if(video?.videoWidth && video?.videoHeight) finish(true); };
+    timer = setTimeout(() => finish(!!(video?.videoWidth && video?.videoHeight)), timeout);
+    video?.addEventListener('loadedmetadata', onReady);
+    video?.addEventListener('canplay', onReady);
+    video?.addEventListener('playing', onReady);
+  });
+}
+
+function getUserMediaWithTimeout(constraints, timeout = 8500){
+  if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    return Promise.reject(new Error('getUserMedia tidak tersedia'));
+  }
+  return Promise.race([
+    navigator.mediaDevices.getUserMedia(constraints),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Izin kamera timeout')), timeout))
+  ]);
+}
+
+async function openLiveCamera(event){
+  if(event && typeof event.preventDefault === 'function') event.preventDefault();
+  if(liveCameraOpening) return;
+  liveCameraOpening = true;
+  const openBtn = $('openLiveCameraBtn');
+  const video = $('liveCameraVideo');
+  if(openBtn){ openBtn.classList.add('rk-working'); openBtn.disabled = true; }
+  try {
+    if(!video){
+      setAiStatus('Panel kamera tidak ditemukan. Pilih foto dari galeri.', 'error');
+      return;
+    }
+    if(!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function'){
+      setAiStatus('Kamera live butuh HTTPS/browser yang mendukung kamera. Pilih foto dari galeri.', 'error');
+      return;
+    }
+    stopLiveCamera(false);
+    setCameraPanelState(true);
+    setAiStatus('Membuka kamera live...', 'loading');
+    let stream;
+    try {
+      stream = await getUserMediaWithTimeout({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:960 } } }, 8500);
+    } catch(primaryErr){
+      console.warn('Back camera failed, trying generic camera:', primaryErr);
+      stream = await getUserMediaWithTimeout({ audio:false, video:true }, 6500);
+    }
+    liveCameraStream = stream;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.muted = true;
+    video.autoplay = true;
+    video.srcObject = stream;
+    try { await video.play(); } catch(playErr){ console.warn('video.play warning:', playErr); }
+    const ready = await waitForLiveVideoFrame(video, 5000);
+    setAiStatus(ready ? 'Kamera siap. Arahkan ke resep lalu tekan Ambil Foto.' : 'Kamera terbuka. Tunggu sebentar lalu tekan Ambil Foto.', 'loading');
+    if($('retakeLivePhotoBtn')) $('retakeLivePhotoBtn').hidden = cameraCapturedDataUrls.length === 0;
+  } catch(err){
+    console.error('Open live camera error:', err);
+    stopLiveCamera(false);
+    setCameraPanelState(false);
+    setAiStatus('Kamera live gagal dibuka. Pilih foto dari galeri.', 'error');
+  } finally {
+    liveCameraOpening = false;
+    if(openBtn){ openBtn.classList.remove('rk-working'); openBtn.disabled = false; }
+  }
+}
+window.openLiveCamera = openLiveCamera;
+
+async function captureLivePhoto(event){
+  if(event && typeof event.preventDefault === 'function') event.preventDefault();
+  if(liveCameraCaptureInFlight) return;
+  liveCameraCaptureInFlight = true;
+  const btn = $('captureLivePhotoBtn');
+  const video = $('liveCameraVideo');
+  const canvas = $('liveCameraCanvas');
+  if(btn){ btn.classList.add('rk-working'); btn.disabled = true; }
+  try {
+    if(!video || !canvas || !video.srcObject){
+      setAiStatus('Kamera live belum aktif. Tekan Buka Kamera Live atau pilih foto dari galeri.', 'error');
+      return;
+    }
+    const ready = await waitForLiveVideoFrame(video, 5000);
+    if(!ready){
+      setAiStatus('Kamera belum siap. Tunggu sebentar lalu tekan Ambil Foto lagi.', 'error');
+      return;
+    }
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 960;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha:false });
+    if(!ctx) throw new Error('Canvas kamera tidak tersedia');
+    ctx.drawImage(video, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.86);
+    if(!/^data:image\/jpeg;base64,/.test(dataUrl) || dataUrl.length < 2500) throw new Error('Frame kamera kosong');
+    cameraCapturedDataUrls = [dataUrl];
+    const gallery = $('aiPhotoInput');
+    if(gallery) gallery.value = '';
+    renderAiPhotoPreview();
+    setLiveCameraCapturedUi(true);
+    stopLiveCamera(false);
+    setAiStatus('Foto kamera tersimpan. Tekan Baca & Rapikan.', 'success');
+  } catch(err){
+    console.error('Capture live photo error:', err);
+    setAiStatus('Foto kamera gagal disimpan. Coba ulangi atau pilih dari galeri.', 'error');
+  } finally {
+    liveCameraCaptureInFlight = false;
+    if(btn){ btn.classList.remove('rk-working'); btn.disabled = false; }
+  }
+}
+window.captureLivePhoto = captureLivePhoto;
+
+function setupLiveCameraCapture(){
+  const captureBtn = $('captureLivePhotoBtn');
+  if(captureBtn) captureBtn.disabled = true;
+  // Buttons use inline handlers to avoid duplicate event binding on mobile browsers.
   window.addEventListener('pagehide', () => stopLiveCamera(false), { once:false });
   window.addEventListener('beforeunload', () => stopLiveCamera(false), { once:false });
 }

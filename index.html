@@ -10,17 +10,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Resep Keluarga" />
-  <link rel="icon" href="/favicon.ico?v=3929" sizes="any" />
-  <link rel="shortcut icon" href="/favicon.ico?v=3929" />
-  <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg?v=3929" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=3929" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=3929" />
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=3929" />
-  <link rel="manifest" href="/manifest.json?v=3929" />
+  <link rel="icon" href="/favicon.ico?v=3930" sizes="any" />
+  <link rel="shortcut icon" href="/favicon.ico?v=3930" />
+  <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg?v=3930" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=3930" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=3930" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=3930" />
+  <link rel="manifest" href="/manifest.json?v=3930" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3.9.29-camera-scraper-verified-fix" />
+  <link rel="stylesheet" href="style.css?v=3.9.31-ux-pdf-polish" />
   <style id="rk-v390-critical">
     html{color-scheme:only light!important;background:#FAFAF9!important}body{background:#FAFAF9!important;color:#111827!important}*{box-sizing:border-box}
   </style>
@@ -281,7 +281,6 @@
             <div class="mobile-camera-capture" aria-label="Kamera live untuk scan resep">
               <div class="camera-action-row">
                 <button class="primary camera-live-btn camera-live-hero" id="openLiveCameraBtn" type="button" onclick="openLiveCamera(event)"><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Buka Kamera Live</button>
-                <button class="secondary camera-live-btn native-camera-btn" id="openNativeCameraBtn" type="button" onclick="openCameraPickerFallback(event)"><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Kamera HP</button>
                 <button class="ghost camera-live-btn" id="stopLiveCameraBtn" type="button" hidden onclick="stopLiveCamera()">Tutup Kamera</button>
               </div>
               <div class="live-camera-panel" id="liveCameraPanel" hidden>
@@ -295,7 +294,6 @@
               </div>
             </div>
             <label class="gallery-fallback-label" for="aiPhotoInput">Atau pilih dari galeri</label>
-            <input id="aiCameraCaptureInput" class="camera-capture-input" type="file" accept="image/*" capture="environment" aria-hidden="true" tabindex="-1" />
             <input id="aiPhotoInput" type="file" accept="image/*" multiple />
             <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
             <button class="primary wide" id="aiExtractPhotoBtn" type="button">Baca & Rapikan</button>
@@ -356,7 +354,7 @@
 
         <div class="essential-form-grid">
           <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Semur Ayam Mama" /></label>
-          <label>Asal Resep
+          <label class="hidden-form-source">Asal Resep
             <select id="sumber_resep"><option>Keluarga</option><option>Warisan</option><option>Internet</option><option>Teman</option><option>Kreasi sendiri</option></select>
           </label>
         </div>
@@ -572,26 +570,6 @@
       <h2>Pengaturan</h2>
       <p class="muted">Akun, tampilan resep, dan backup.</p>
       <div class="tool-card account-card"><h3>Akun aktif</h3><p id="settingsAccountText" class="muted">-</p><button id="settingsLogoutBtn" class="danger wide" type="button">Logout</button></div>
-      <div class="tool-card view-setting-card">
-        <div class="view-setting-head">
-          <div>
-            <h3>Tampilan resep</h3>
-            <p>Pilih cara melihat daftar resep di halaman Resep.</p>
-          </div>
-        </div>
-        <div class="recipe-view-toggle" role="radiogroup" aria-label="Tampilan resep">
-          <button id="recipeViewListBtn" class="view-mode-btn active" type="button" role="radio" aria-checked="true" data-view-mode="list">
-            <span class="view-mode-icon list-preview"><i></i><i></i><i></i></span>
-            <b>1 per baris</b>
-            <small>Lebih nyaman dibaca</small>
-          </button>
-          <button id="recipeViewGridBtn" class="view-mode-btn" type="button" role="radio" aria-checked="false" data-view-mode="grid">
-            <span class="view-mode-icon grid-preview"><i></i><i></i><i></i><i></i></span>
-            <b>2 per baris</b>
-            <small>Lebih cepat browsing</small>
-          </button>
-        </div>
-      </div>
       <div class="trust-state-grid settings-action-grid">
         <button class="trust-state-card settings-action-card" type="button" id="forceLightModeBtn"><b>Light mode</b><span>Aktif permanen.</span></button>
         <button class="trust-state-card settings-action-card" type="button" id="openHubFromSettingsBtn"><b>Family Hub</b><span>Buka menu keluarga.</span></button>
@@ -613,18 +591,9 @@
   <div id="toastStack" class="toast-stack" aria-live="polite"></div>
 
   <div id="photoViewer" class="photo-viewer" aria-hidden="true">
-    <div class="photo-viewer-top">
-      <button class="photo-viewer-btn" onclick="closePhotoViewer()" type="button"><svg class="rk-inline-icon"><use href="#i-close"></use></svg></button>
-      <div class="photo-viewer-tools">
-        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(-0.25)" type="button"><svg class="rk-inline-icon"><use href="#i-minus"></use></svg></button>
-        <button class="photo-viewer-btn" onclick="resetPhotoViewer()" type="button">Reset</button>
-        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(0.25)" type="button"><svg class="rk-inline-icon"><use href="#i-plus"></use></svg></button>
-      </div>
-    </div>
     <div class="photo-viewer-stage">
       <img id="photoViewerImg" alt="Zoom foto resep" draggable="false" />
     </div>
-    <p class="photo-viewer-hint">Cubit foto untuk zoom, geser untuk melihat detail.</p>
   </div>
 
   <nav class="bottomnav" aria-label="Navigasi utama">
@@ -636,10 +605,10 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.9.29-camera-scraper-verified-fix"></script>
+  <script src="app.js?v=3.9.31-ux-pdf-polish"></script>
   <script>
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js?v=3.9.26-youtube-rich-caption-scraper').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
+      navigator.serviceWorker.register('/sw.js?v=3.9.31-ux-pdf-polish').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
     }
   </script>
 </body>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rk-cache-v3929-camera-scraper-verified-fix';
+const CACHE_NAME = 'rk-cache-v3931-camera-viewer-settings-fix';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
