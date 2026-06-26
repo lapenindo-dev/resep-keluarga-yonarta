@@ -10,17 +10,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Resep Keluarga" />
-  <link rel="icon" href="/favicon.ico?v=3925" sizes="any" />
-  <link rel="shortcut icon" href="/favicon.ico?v=3925" />
-  <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg?v=3925" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=3925" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=3925" />
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=3925" />
-  <link rel="manifest" href="/manifest.json?v=3925" />
+  <link rel="icon" href="/favicon.ico?v=3929" sizes="any" />
+  <link rel="shortcut icon" href="/favicon.ico?v=3929" />
+  <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg?v=3929" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=3929" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=3929" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=3929" />
+  <link rel="manifest" href="/manifest.json?v=3929" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3.9.26-youtube-rich-caption-scraper" />
+  <link rel="stylesheet" href="style.css?v=3.9.29-camera-scraper-verified-fix" />
   <style id="rk-v390-critical">
     html{color-scheme:only light!important;background:#FAFAF9!important}body{background:#FAFAF9!important;color:#111827!important}*{box-sizing:border-box}
   </style>
@@ -280,22 +280,22 @@
             </div>
             <div class="mobile-camera-capture" aria-label="Kamera live untuk scan resep">
               <div class="camera-action-row">
-                <button class="primary camera-live-btn camera-live-hero" id="openLiveCameraBtn" type="button"><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Buka Kamera Live</button>
-                <button class="secondary camera-live-btn native-camera-btn" id="openNativeCameraBtn" type="button" hidden><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Kamera Perangkat</button>
-                <button class="ghost camera-live-btn" id="stopLiveCameraBtn" type="button" hidden>Tutup Kamera</button>
+                <button class="primary camera-live-btn camera-live-hero" id="openLiveCameraBtn" type="button" onclick="openLiveCamera(event)"><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Buka Kamera Live</button>
+                <button class="secondary camera-live-btn native-camera-btn" id="openNativeCameraBtn" type="button" onclick="openCameraPickerFallback(event)"><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Kamera HP</button>
+                <button class="ghost camera-live-btn" id="stopLiveCameraBtn" type="button" hidden onclick="stopLiveCamera()">Tutup Kamera</button>
               </div>
               <div class="live-camera-panel" id="liveCameraPanel" hidden>
                 <video id="liveCameraVideo" autoplay playsinline muted></video>
                 <canvas id="liveCameraCanvas" hidden></canvas>
                 <div class="camera-action-row inside-camera-actions">
-                  <button class="primary" id="captureLivePhotoBtn" type="button">Ambil Foto</button>
-                  <button class="secondary" id="retakeLivePhotoBtn" type="button" hidden>Ulangi</button>
+                  <button class="primary" id="captureLivePhotoBtn" type="button" onclick="captureLivePhoto(event)">Ambil Foto</button>
+                  <button class="secondary" id="retakeLivePhotoBtn" type="button" hidden onclick="openLiveCamera(event)">Ulangi</button>
                 </div>
                 <div id="liveCameraSavedState" class="camera-saved-state" hidden>Foto tersimpan. Lanjutkan dengan Baca & Rapikan.</div>
               </div>
             </div>
             <label class="gallery-fallback-label" for="aiPhotoInput">Atau pilih dari galeri</label>
-            <input id="aiCameraCaptureInput" class="camera-capture-input" type="file" accept="image/*" capture="environment" hidden />
+            <input id="aiCameraCaptureInput" class="camera-capture-input" type="file" accept="image/*" capture="environment" aria-hidden="true" tabindex="-1" />
             <input id="aiPhotoInput" type="file" accept="image/*" multiple />
             <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
             <button class="primary wide" id="aiExtractPhotoBtn" type="button">Baca & Rapikan</button>
@@ -317,7 +317,7 @@
             <label class="web-link-input-label">Link Resep
               <input id="aiLinkInput" type="url" inputmode="url" autocomplete="url" placeholder="https://youtube.com/... atau https://website-resep.com/..." />
             </label>
-            <p class="mini-note">YouTube/blog/website. Jika transcript tidak tersedia, paste caption di tab Caption.</p>
+            <p class="mini-note">YouTube/blog/website. Sistem akan membaca thumbnail, deskripsi/caption, bahan, dan langkah jika tersedia.</p>
             <button class="primary wide" id="aiExtractLinkBtn" type="button" onclick="handleAiExtractLink()"><svg class="rk-inline-icon"><use href="#i-link"></use></svg> Ambil dari Link</button>
           </div>
         </div>
@@ -352,6 +352,7 @@
 
       <form id="recipeForm" class="recipe-form-card">
         <input type="hidden" id="recipeId" />
+        <input type="hidden" id="imported_photo_url" />
 
         <div class="essential-form-grid">
           <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Semur Ayam Mama" /></label>
@@ -635,7 +636,7 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.9.26-youtube-rich-caption-scraper"></script>
+  <script src="app.js?v=3.9.29-camera-scraper-verified-fix"></script>
   <script>
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js?v=3.9.26-youtube-rich-caption-scraper').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
