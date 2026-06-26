@@ -1,6 +1,6 @@
 // /api/extract-recipe.js
 // Vercel Serverless Function — perantara aman ke Qwen API (DashScope)
-// API keys disimpan di Environment Variables Vercel: DASHSCOPE_API_KEY dan opsional YOUTUBE_API_KEY/YOUTUBE_INNERTUBE_KEY. Jangan hardcode key di repo.
+// API key disimpan di Environment Variable DASHSCOPE_API_KEY (jangan taruh di client)
 
 const DASHSCOPE_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 
@@ -315,7 +315,7 @@ function extractYoutubeDescriptionFromHtml(html = '') {
 
 async function fetchYoutubeNext(videoId) {
   if (!videoId) return null;
-  const keys = [process.env.YOUTUBE_INNERTUBE_KEY || process.env.YOUTUBE_API_KEY || process.env.GOOGLE_YOUTUBE_API_KEY].filter(Boolean);
+  const keys = [process.env.YOUTUBE_INNERTUBE_KEY, 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'].filter(Boolean);
   const clients = [
     { clientName: 'WEB', clientVersion: '2.20240304.00.00' },
     { clientName: 'ANDROID', clientVersion: '19.09.37', androidSdkVersion: 30 }
@@ -614,7 +614,8 @@ async function fetchYoutubeDataApi(videoId) {
 async function fetchYoutubeInnertube(videoId) {
   if (!videoId) return null;
   const keys = [
-    process.env.YOUTUBE_INNERTUBE_KEY || process.env.YOUTUBE_API_KEY || process.env.GOOGLE_YOUTUBE_API_KEY
+    process.env.YOUTUBE_INNERTUBE_KEY,
+    'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
   ].filter(Boolean);
   const clients = [
     { clientName: 'WEB', clientVersion: '2.20240304.00.00' },
