@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-keluarga-v3.9.23-rich-web-scraper';
+const CACHE_NAME = 'rk-cache-v3925-youtube-scraper';
 
 self.addEventListener('install', event => {
   self.skipWaiting();

@@ -10,7 +10,7 @@ let db;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
 catch(e){ console.error('Supabase init gagal:', e); }
 const PHOTO_BUCKET = 'recipe-photos';
-const APP_VERSION = '3.9.23';
+const APP_VERSION = '3.9.25';
 // v2.1.9: posisi Bantu Isi Resep dipindah di bawah Foto Resep / Tambahan.
 // v2.2.0: Foto Masakan dibuat responsive agar selalu rapi mengikuti lebar device.
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
@@ -48,7 +48,6 @@ let liveCameraOpening = false;
 let aiLinkExtractInFlight = false;
 let cameraCapturedDataUrls = [];
 let aiPhotoObjectUrls = [];
-let extractedRemotePhotoUrl = null;
 const DEFAULT_COLLECTIONS = ['Resep Mama','Resep Oma','Menu Harian','Menu Anak','Hari Raya','Favorit Rumah'];
 
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
@@ -1147,7 +1146,7 @@ async function handleRecipeSubmit(e){
     tag: csvArray($('tag').value),
     catatan_yonarta: $('catatan_yonarta').value.trim(),
     link_sumber: $('link_sumber').value.trim(),
-    foto_url: uploadedPhotoUrl || extractedRemotePhotoUrl || existing?.foto_url || null,
+    foto_url: uploadedPhotoUrl || existing?.foto_url || null,
     foto_urls: extraPhotosState,
     dimasak_oleh: $('dimasak_oleh').value.trim(),
     sumber_resep: $('sumber_resep') ? $('sumber_resep').value : 'Kreasi sendiri',
@@ -1208,7 +1207,6 @@ function resetForm(){
   selectAiTab('photo-caption');
   document.querySelectorAll('.capture-choice').forEach(btn=>btn.classList.toggle('active', btn.dataset.sourceChoice === 'Keluarga'));
   $('rating_keluarga').value=0;
-  extractedRemotePhotoUrl = null;
   setPhotoPreview(null);
   extraPhotosState = [];
   renderExtraPhotosPreview();
@@ -1950,13 +1948,6 @@ function applyExtractedRecipe(recipe, sourceLabel){
     $('tag').value = recipe.tag.join(', ');
   }
   if(recipe.link_sumber && $('link_sumber')) $('link_sumber').value = recipe.link_sumber;
-  if(recipe.foto_url && /^https?:\/\//i.test(String(recipe.foto_url))){
-    extractedRemotePhotoUrl = String(recipe.foto_url).trim();
-    setPhotoPreview(extractedRemotePhotoUrl);
-  }
-  if(recipe.catatan_sumber && $('catatan_yonarta') && !$('catatan_yonarta').value.trim()){
-    $('catatan_yonarta').value = recipe.catatan_sumber;
-  }
   if(Array.isArray(recipe.bahan) && recipe.bahan.length){
     ingredientGroupsState = normalizeIngredientGroups(recipe.bahan);
     renderIngredientGroups();
@@ -2017,13 +2008,13 @@ async function handleAiExtractLink(){
   }
   if($('link_sumber')) $('link_sumber').value = normalizedUrl;
   if($('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(source || 'Internet');
-  setAiStatus('Mengambil judul, gambar, bahan, langkah, dan transcript bila tersedia...', 'loading');
+  setAiStatus('Mengambil isi link...', 'loading');
   try {
     const recipe = await callExtractRecipeApi({ mode: 'url', url: normalizedUrl });
     recipe.link_sumber = recipe.link_sumber || normalizedUrl;
     applyExtractedRecipe(recipe, source || 'Internet');
   } catch(err){
-    setAiStatus(err.message || 'Gagal mengambil resep lengkap dari link. Coba paste caption/transcript di tab Caption.', 'error');
+    setAiStatus(err.message || 'Gagal mengambil resep dari link.', 'error');
   } finally {
     aiLinkExtractInFlight = false;
     if(btn){ btn.classList.remove('rk-working'); btn.disabled = false; }
@@ -2811,5 +2802,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.23 commercial QA fix loaded');
+  console.log('Resep Keluarga v3.9.25 youtube rich caption scraper fix loaded');
 });
