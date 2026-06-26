@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.9.9
+   Resep Keluarga v3.9.10
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -177,13 +177,40 @@ function closeFamilyHub(){
 window.openFamilyHub = openFamilyHub;
 window.closeFamilyHub = closeFamilyHub;
 
+
+function withTimeout(promise, ms=9000, label='request'){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + ' terlalu lama. Periksa koneksi atau RLS Supabase.')), ms))
+  ]);
+}
+
+async function loadAllSafe(context='manual'){
+  try {
+    await loadAll();
+    return true;
+  } catch(e){
+    console.error('loadAllSafe gagal:', e);
+    recipes = Array.isArray(recipes) ? recipes : [];
+    masterIngredients = Array.isArray(masterIngredients) ? masterIngredients : [];
+    masterUnits = masterUnits?.length ? masterUnits : DEFAULT_UNITS.map(x=>({nama_satuan:x}));
+    cookLog = Array.isArray(cookLog) ? cookLog : [];
+    mealPlan = Array.isArray(mealPlan) ? mealPlan : [];
+    recipeHistory = Array.isArray(recipeHistory) ? recipeHistory : [];
+    recipeCollections = recipeCollections || {};
+    try { render(); } catch(renderError){ console.error('Render fallback gagal:', renderError); }
+    showToast('Login berhasil, tetapi data belum selesai dimuat. Coba refresh jika resep belum muncul.', 'info');
+    return false;
+  }
+}
+
 async function initAuth(){
   if(!db){
     setAuthStatus('Database belum siap. Refresh halaman.', 'error');
     return;
   }
   try{
-    const { data } = await db.auth.getSession();
+    const { data } = await withTimeout(db.auth.getSession(), 7000, 'Membaca session login');
     currentUser = data?.session?.user || null;
     renderAuthState();
     db.auth.onAuthStateChange(async (_event, session) => {
@@ -191,11 +218,14 @@ async function initAuth(){
       renderAuthState();
       if(currentUser){
         setAuthStatus(null);
-        await loadAll();
+        go('home', { replace:true });
+        loadAllSafe('auth-change');
       }
     });
     if(currentUser){
-      await loadAll();
+      setAuthStatus(null);
+      go('home', { replace:true });
+      loadAllSafe('init-session');
     } else {
       setAuthStatus('Silakan login dulu untuk membuka resep keluarga.', 'loading');
     }
@@ -227,25 +257,25 @@ async function loginWithPassword(){
   const restoreBtn = setButtonBusy($('loginPasswordBtn'), 'Masuk...');
   setAuthStatus('Memproses login...', 'loading');
   try{
-    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    const { data, error } = await withTimeout(db.auth.signInWithPassword({ email, password }), 10000, 'Login Supabase');
     if(error){
       setAuthStatus('Gagal login: ' + friendlyAuthError(error), 'error');
       return;
     }
     currentUser = data?.user || data?.session?.user || null;
     if(!currentUser){
-      const { data: sessionData } = await db.auth.getSession();
+      const { data: sessionData } = await withTimeout(db.auth.getSession(), 7000, 'Membaca session setelah login');
       currentUser = sessionData?.session?.user || null;
     }
     if(!currentUser){
       setAuthStatus('Login diterima, tetapi sesi belum terbaca. Refresh halaman sekali.', 'error');
       return;
     }
-    renderAuthState();
     setAuthStatus(null);
-    await loadAll();
-    go('home');
-    showToast('Login berhasil. Resep keluarga siap dibuka.', 'success');
+    renderAuthState();
+    go('home', { replace:true });
+    showToast('Login berhasil. Memuat resep keluarga...', 'success');
+    loadAllSafe('password-login');
   } catch(e){
     console.error('Login gagal:', e);
     setAuthStatus('Login gagal: ' + (e.message || 'coba lagi.'), 'error');
@@ -457,37 +487,57 @@ function updateBackButton(){
 
 async function loadAll(){
   if(!db){ showToast('Database belum siap. Refresh halaman.', 'error'); return; }
-  if(!requireLogin()) return;
-  const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
-  if(er){ showToast('Gagal memuat resep. Coba refresh.', 'error'); console.error(er); return; }
-  recipes = r || [];
+  if(!currentUser){ renderAuthState(); return; }
 
-  const mi = await db.from('master_ingredients').select('*').order('nama_bahan',{ascending:true});
-  if(!mi.error) masterIngredients = mi.data || [];
-  const mu = await db.from('master_units').select('*').order('nama_satuan',{ascending:true});
-  masterUnits = mu.error ? DEFAULT_UNITS.map(x=>({nama_satuan:x})) : (mu.data || []);
+  const recipesResult = await withTimeout(
+    db.from('recipes').select('*').order('created_at',{ascending:false}),
+    10000,
+    'Memuat tabel recipes'
+  );
+  const {data: r, error: er} = recipesResult;
+  if(er){
+    console.error('Gagal memuat recipes:', er);
+    recipes = [];
+    showToast('Login berhasil, tetapi tabel recipes belum bisa dibaca. Cek RLS/migration Supabase.', 'error');
+  } else {
+    recipes = r || [];
+  }
+
+  try {
+    const mi = await withTimeout(db.from('master_ingredients').select('*').order('nama_bahan',{ascending:true}), 8000, 'Memuat master bahan');
+    masterIngredients = mi.error ? [] : (mi.data || []);
+    if(mi.error) console.warn('master_ingredients belum tersedia:', mi.error.message);
+  } catch(e){ console.warn('master_ingredients timeout/gagal:', e.message); masterIngredients = []; }
+
+  try {
+    const mu = await withTimeout(db.from('master_units').select('*').order('nama_satuan',{ascending:true}), 8000, 'Memuat satuan');
+    masterUnits = mu.error ? DEFAULT_UNITS.map(x=>({nama_satuan:x})) : (mu.data || []);
+    if(mu.error) console.warn('master_units belum tersedia:', mu.error.message);
+  } catch(e){ console.warn('master_units timeout/gagal:', e.message); masterUnits = DEFAULT_UNITS.map(x=>({nama_satuan:x})); }
   if(!masterUnits.length) masterUnits = DEFAULT_UNITS.map(x=>({nama_satuan:x}));
 
-  const cl = await db.from('cook_log').select('*').order('cooked_at',{ascending:false});
-  cookLog = cl.error ? [] : (cl.data || []);
-  if(cl.error) console.warn('cook_log belum tersedia (jalankan migrasi SQL):', cl.error.message);
-
-  // --- Cloud sync: view history, meal plan, collections ---
   try {
-    const vh = await db.from('recipe_view_history').select('recipe_id').order('viewed_at',{ascending:false}).limit(10);
+    const cl = await withTimeout(db.from('cook_log').select('*').order('cooked_at',{ascending:false}), 8000, 'Memuat cook log');
+    cookLog = cl.error ? [] : (cl.data || []);
+    if(cl.error) console.warn('cook_log belum tersedia:', cl.error.message);
+  } catch(e){ console.warn('cook_log timeout/gagal:', e.message); cookLog = []; }
+
+  try {
+    const vh = await withTimeout(db.from('recipe_view_history').select('recipe_id').order('viewed_at',{ascending:false}).limit(10), 8000, 'Memuat riwayat');
     recipeHistory = vh.error ? [] : (vh.data || []).map(r => r.recipe_id);
-  } catch(e){ console.warn('recipe_view_history belum tersedia:', e.message); }
+  } catch(e){ console.warn('recipe_view_history belum tersedia:', e.message); recipeHistory = []; }
 
   try {
-    const mp = await db.from('user_meal_plans').select('plan_data').eq('user_id', currentUser.id).single();
+    const mp = await withTimeout(db.from('user_meal_plans').select('plan_data').eq('user_id', currentUser.id).maybeSingle(), 8000, 'Memuat rencana masak');
     mealPlan = (mp.error || !mp.data) ? [] : (mp.data.plan_data || []);
     mealPlan = (mealPlan || []).map(d => ({ ...d, meals: Array.isArray(d.meals) ? d.meals.slice(0, 2) : [] }));
   } catch(e){ console.warn('user_meal_plans belum tersedia:', e.message); mealPlan = []; }
 
   try {
-    const uc = await db.from('user_collections').select('collection_name, recipe_ids').eq('user_id', currentUser.id);
+    const uc = await withTimeout(db.from('user_collections').select('collection_name, recipe_ids').eq('user_id', currentUser.id), 8000, 'Memuat koleksi');
     recipeCollections = {};
     if(!uc.error && uc.data) uc.data.forEach(row => { recipeCollections[row.collection_name] = row.recipe_ids || []; });
+    if(uc.error) console.warn('user_collections belum tersedia:', uc.error.message);
   } catch(e){ console.warn('user_collections belum tersedia:', e.message); recipeCollections = {}; }
 
   render();
@@ -2003,7 +2053,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga',
-    version: '3.9.9',
+    version: '3.9.10',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -2107,7 +2157,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.9</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.10</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2312,5 +2362,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.9 login session fix loaded');
+  console.log('Resep Keluarga v3.9.10 login session fix loaded');
 });
