@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-keluarga-v3.9.20-commercial-qa-fix';
+const CACHE_NAME = 'resep-keluarga-v3.9.23-rich-web-scraper';
 
 self.addEventListener('install', event => {
   self.skipWaiting();

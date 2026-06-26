@@ -3,21 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga v3.9.20</title>
+  <title>Resep Keluarga v3.9.21</title>
   <meta name="theme-color" content="#FAFAF9" />
   <meta name="color-scheme" content="light" />
   <meta name="description" content="Buku resep keluarga digital untuk menyimpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Resep Keluarga" />
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="/favicon.ico?v=3921" sizes="any" />
+  <link rel="shortcut icon" href="/favicon.ico?v=3921" />
+  <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg?v=3921" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=3921" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=3921" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=3921" />
+  <link rel="manifest" href="/manifest.json?v=3921" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3.9.20-commercial-qa-fix" />
+  <link rel="stylesheet" href="style.css?v=3.9.21-commercial-qa-fix" />
   <style id="rk-v390-critical">
     html{color-scheme:only light!important;background:#FAFAF9!important}body{background:#FAFAF9!important;color:#111827!important}*{box-sizing:border-box}
   </style>
@@ -175,9 +178,9 @@
 
       <div class="quick-action-row" aria-label="Aksi cepat">
         <button class="quick-action-pill primary-pill" data-go="add" data-aitab="photo-caption" type="button"><span><svg class="rk-icon"><use href="#i-camera"></use></svg></span><b>Scan Foto</b></button>
+        <button class="quick-action-pill link-pill" data-go="add" data-aitab="web-link" type="button"><span><svg class="rk-icon"><use href="#i-link"></use></svg></span><b>Link</b></button>
         <button class="quick-action-pill" data-go="add" data-aitab="caption-text" type="button"><span><svg class="rk-icon"><use href="#i-text"></use></svg></span><b>Caption</b></button>
         <button class="quick-action-pill" data-go="add" data-aitab="manual" type="button"><span><svg class="rk-icon"><use href="#i-edit"></use></svg></span><b>Manual</b></button>
-        <button class="quick-action-pill" onclick="openFamilyHub()" type="button"><span><svg class="rk-icon"><use href="#i-hub"></use></svg></span><b>Hub</b></button>
       </div>
 
       <div id="firstRecipeGuide" class="first-recipe-guide" style="display:none">
@@ -277,7 +280,7 @@
             </div>
             <div class="mobile-camera-capture" aria-label="Kamera live untuk scan resep">
               <div class="camera-action-row">
-                <button class="primary camera-live-btn camera-live-hero" id="openLiveCameraBtn" type="button" onclick="openLiveCamera()"><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Buka Kamera Live</button>
+                <button class="primary camera-live-btn camera-live-hero" id="openLiveCameraBtn" type="button"><svg class="rk-inline-icon"><use href="#i-camera"></use></svg> Buka Kamera Live</button>
                 <button class="ghost camera-live-btn" id="stopLiveCameraBtn" type="button" hidden>Tutup Kamera</button>
               </div>
               <div class="live-camera-panel" id="liveCameraPanel" hidden>
@@ -287,6 +290,7 @@
                   <button class="primary" id="captureLivePhotoBtn" type="button">Ambil Foto</button>
                   <button class="secondary" id="retakeLivePhotoBtn" type="button" hidden>Ulangi</button>
                 </div>
+                <div id="liveCameraSavedState" class="camera-saved-state" hidden>Foto tersimpan. Lanjutkan dengan Baca & Rapikan.</div>
               </div>
             </div>
             <label class="gallery-fallback-label" for="aiPhotoInput">Atau pilih dari galeri</label>
@@ -630,10 +634,10 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.9.20-commercial-qa-fix"></script>
+  <script src="app.js?v=3.9.21-commercial-qa-fix"></script>
   <script>
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js?v=3.9.20-commercial-qa-fix').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
+      navigator.serviceWorker.register('/sw.js?v=3.9.21-commercial-qa-fix').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
     }
   </script>
 </body>

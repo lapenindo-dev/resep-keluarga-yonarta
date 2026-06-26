@@ -350,3 +350,12 @@ button:focus-visible,.quick-action-pill:focus-visible,.capture-method:focus-visi
   .recipe-view-grid #recipeList .recipe-meta{display:none!important;}
   .bottomnav button{font-size:10.2px!important;}
 }
+
+
+/* v3.9.23 — Home capture order + robust live camera capture */
+.quick-action-pill.link-pill span{background:linear-gradient(145deg,#FFF2E8,#F1F8F4)!important;color:#B85E36!important;border-color:#F0D9C9!important;}
+.quick-action-pill.link-pill:active,.quick-action-pill.link-pill.rk-working{background:#FFF7EF!important;border-color:#EBC9B4!important;}
+.camera-saved-state{margin-top:8px;padding:9px 11px;border-radius:14px;background:#F0F8F3;color:#17684C;border:1px solid #DDEEE4;font-size:12.4px;font-weight:720;line-height:1.35;}
+#captureLivePhotoBtn{background:linear-gradient(135deg,#17684C 0%,#1F7A58 100%)!important;}
+#captureLivePhotoBtn.rk-success-pulse{background:linear-gradient(135deg,#C96A35 0%,#17684C 100%)!important;}
+@media (max-width:420px){.quick-action-row{grid-template-columns:repeat(4,minmax(0,1fr))!important}.quick-action-pill b{font-size:10.7px!important}}
