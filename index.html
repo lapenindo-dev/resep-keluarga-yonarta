@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga v3.9.11</title>
+  <title>Resep Keluarga v3.9.12</title>
   <meta name="theme-color" content="#FAFAF9" />
   <meta name="color-scheme" content="light" />
   <meta name="description" content="Buku resep keluarga digital untuk menyimpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu." />
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3.9.11-tabs-light-settings" />
+  <link rel="stylesheet" href="style.css?v=3.9.12-premium-foundation" />
   <style id="rk-v390-critical">
     html{color-scheme:only light!important;background:#FAFAF9!important}body{background:#FAFAF9!important;color:#111827!important}*{box-sizing:border-box}
   </style>
@@ -164,9 +164,9 @@
       </div>
 
       <div class="quick-action-row" aria-label="Aksi cepat">
-        <button class="quick-action-pill primary-pill" data-go="add" type="button"><span><svg class="rk-icon"><use href="#i-camera"></use></svg></span><b>Scan</b></button>
-        <button class="quick-action-pill" data-go="add" type="button"><span><svg class="rk-icon"><use href="#i-text"></use></svg></span><b>Caption</b></button>
-        <button class="quick-action-pill" data-go="add" type="button"><span><svg class="rk-icon"><use href="#i-edit"></use></svg></span><b>Manual</b></button>
+        <button class="quick-action-pill primary-pill" data-go="add" data-aitab="photo-caption" type="button"><span><svg class="rk-icon"><use href="#i-camera"></use></svg></span><b>Scan Foto</b></button>
+        <button class="quick-action-pill" data-go="add" data-aitab="caption-text" type="button"><span><svg class="rk-icon"><use href="#i-text"></use></svg></span><b>Caption</b></button>
+        <button class="quick-action-pill" data-go="add" data-aitab="manual" type="button"><span><svg class="rk-icon"><use href="#i-edit"></use></svg></span><b>Manual</b></button>
         <button class="quick-action-pill" onclick="openFamilyHub()" type="button"><span><svg class="rk-icon"><use href="#i-hub"></use></svg></span><b>Hub</b></button>
       </div>
 
@@ -234,7 +234,7 @@
     <section id="add" class="page add-page">
       <div class="screen-heading">
         <h2 id="formTitle">Tambah Resep</h2>
-        <p class="muted quick-capture-intro">Simpan dulu. Cerita dan detail bisa dilengkapi nanti.</p>
+        <p class="muted quick-capture-intro">Ambil dari foto, caption, atau tulis manual.</p>
       </div>
 
       <div class="capture-methods" aria-label="Pilih cara tambah resep">
@@ -322,7 +322,7 @@
 
         <label>Cara Memasak<textarea id="cara_memasak" placeholder="Satu langkah per baris"></textarea></label>
 
-        <button id="toggleAdvancedFormBtn" class="secondary wide" type="button">Detail Tambahan</button>
+        <button id="toggleAdvancedFormBtn" class="secondary wide" type="button">Detail tambahan</button>
 
         <div class="advanced-fields-panel">
           <label class="extra-photo-field advanced-field">Foto Tambahan
@@ -561,10 +561,10 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.9.11-tabs-light-settings"></script>
+  <script src="app.js?v=3.9.12-premium-foundation"></script>
   <script>
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js?v=3.9.11-tabs-light-settings').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
+      navigator.serviceWorker.register('/sw.js?v=3.9.12-premium-foundation').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
     }
   </script>
 </body>

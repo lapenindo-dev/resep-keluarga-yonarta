@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.9.11
+   Resep Keluarga v3.9.12
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -1093,7 +1093,7 @@ window.editRecipe = (id)=>{
   extraPhotosState = Array.isArray(r.foto_urls) ? [...r.foto_urls] : [];
   renderExtraPhotosPreview();
   go('add');
-  window.scrollTo({top:0, behavior:'smooth'});
+  document.getElementById('recipeForm')?.scrollIntoView({behavior:'smooth', block:'start'});
 };
 
 window.deleteRecipe = async (id)=>{
@@ -1115,6 +1115,7 @@ function resetForm(){
   if($('penulis_nama')) $('penulis_nama').value='';
   if($('sumber_resep')) $('sumber_resep').value='Keluarga';
   document.body.classList.remove('show-advanced-form');
+  document.querySelector('.advanced-fields-panel')?.classList.remove('open');
   if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').textContent = 'Detail tambahan';
   selectAiTab('photo-caption');
   document.querySelectorAll('.capture-choice').forEach(btn=>btn.classList.toggle('active', btn.dataset.sourceChoice === 'Keluarga'));
@@ -1639,7 +1640,7 @@ function applyExtractedRecipe(recipe, sourceLabel){
   }
   if(sourceLabel && $('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(sourceLabel);
   setAiStatus('Resep sudah dirapikan. Periksa lalu simpan.', 'success');
-  window.scrollTo({top:0, behavior:'smooth'});
+  document.getElementById('recipeForm')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 async function handleAiExtractPhoto(){
@@ -2188,7 +2189,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.11</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.12</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2222,15 +2223,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if($('forceLightModeBtn')) $('forceLightModeBtn').addEventListener('click', () => { enforceLightMode(); showToast('Light mode sudah dikunci.', 'success'); });
   if($('openHubFromSettingsBtn')) $('openHubFromSettingsBtn').addEventListener('click', openFamilyHub);
   if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').addEventListener('click', () => {
-    document.body.classList.toggle('show-advanced-form');
-    $('toggleAdvancedFormBtn').textContent = document.body.classList.contains('show-advanced-form') ? 'Sembunyikan detail opsional' : 'Detail opsional';
+    const panel = document.querySelector('.advanced-fields-panel');
+    const open = !panel?.classList.contains('open');
+    panel?.classList.toggle('open', open);
+    document.body.classList.toggle('show-advanced-form', open);
+    $('toggleAdvancedFormBtn').textContent = open ? 'Sembunyikan detail tambahan' : 'Detail tambahan';
   });
   document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeFamilyHub(); });
 
   // Navigation
   document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
-    if(b.dataset.go === 'add'){ resetForm(); }
-    go(b.dataset.go);
+    const target = b.dataset.go;
+    const requestedAiTab = b.dataset.aitab;
+    if(target === 'add'){ resetForm(); }
+    go(target);
+    if(target === 'add' && requestedAiTab){ setTimeout(() => selectAiTab(requestedAiTab), 0); }
   }));
 
   // Refresh button — with visual feedback
@@ -2396,5 +2403,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.11 login session fix loaded');
+  console.log('Resep Keluarga v3.9.12 premium foundation loaded');
 });
