@@ -1741,14 +1741,21 @@ function setCameraPanelState(open){
 
 function openCameraPickerFallback(){
   const cameraInput = $('aiCameraCaptureInput') || $('aiPhotoInput');
-  if(cameraInput){
-    try {
-      cameraInput.disabled = false;
-      cameraInput.click();
-      return true;
-    } catch(e) { return false; }
+  if(!cameraInput) return false;
+  try {
+    cameraInput.disabled = false;
+    cameraInput.removeAttribute('disabled');
+    cameraInput.click();
+    return true;
+  } catch(e) {
+    console.warn('Native camera picker fallback failed:', e);
+    return false;
   }
-  return false;
+}
+
+function showNativeCameraFallback(show = true){
+  const btn = $('openNativeCameraBtn');
+  if(btn) btn.hidden = !show;
 }
 
 function waitForLiveVideoFrame(video, timeout = 1800){
@@ -1811,36 +1818,72 @@ async function openLiveCamera(){
   liveCameraOpening = true;
   const openBtn = $('openLiveCameraBtn');
   if(openBtn){ openBtn.classList.add('rk-working'); openBtn.disabled = true; }
-  if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){
-    const opened = openCameraPickerFallback();
-    setAiStatus(opened ? 'Kamera perangkat dibuka. Ambil foto lalu kembali ke app.' : 'Kamera tidak tersedia di browser ini. Pakai pilihan galeri.', opened ? 'loading' : 'error');
+
+  const video = $('liveCameraVideo');
+  const panel = $('liveCameraPanel');
+  showNativeCameraFallback(false);
+
+  if(!window.isSecureContext){
+    setAiStatus('Kamera live butuh HTTPS. Gunakan tombol Kamera Perangkat.', 'error');
+    showNativeCameraFallback(true);
     liveCameraOpening = false;
     if(openBtn){ openBtn.classList.remove('rk-working'); openBtn.disabled = false; }
     return;
   }
+
+  if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function'){
+    setAiStatus('Kamera live tidak didukung browser ini. Gunakan tombol Kamera Perangkat.', 'error');
+    showNativeCameraFallback(true);
+    liveCameraOpening = false;
+    if(openBtn){ openBtn.classList.remove('rk-working'); openBtn.disabled = false; }
+    return;
+  }
+
   try {
     stopLiveCamera(false);
-    setAiStatus('Membuka kamera...', 'loading');
-    liveCameraStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      }
-    });
-    const video = $('liveCameraVideo');
-    if(video){
-      video.srcObject = liveCameraStream;
-      await video.play().catch(()=>{});
-    }
     setCameraPanelState(true);
+    setAiStatus('Membuka kamera...', 'loading');
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+    } catch(primaryErr){
+      console.warn('Environment camera failed, trying generic video:', primaryErr);
+      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:true });
+    }
+
+    liveCameraStream = stream;
+    if(video){
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.muted = true;
+      video.autoplay = true;
+      video.srcObject = liveCameraStream;
+      await video.play().catch(err => console.warn('Video play delayed:', err));
+    }
+
+    const ready = await waitForLiveVideoFrame(video, 3500);
+    if(!ready){
+      // Keep panel open; some Android devices report dimensions late but still allow capture after a moment.
+      setAiStatus('Kamera terbuka. Jika layar belum muncul, tunggu sebentar atau pakai Kamera Perangkat.', 'loading');
+      showNativeCameraFallback(true);
+    } else {
+      setAiStatus('Arahkan kamera ke resep, lalu ambil foto.', 'loading');
+    }
     if($('retakeLivePhotoBtn')) $('retakeLivePhotoBtn').hidden = cameraCapturedDataUrls.length === 0;
-    setAiStatus('Arahkan kamera ke resep, lalu ambil foto.', 'loading');
   } catch(err){
+    console.error('Open live camera error:', err);
+    stopLiveCamera(false);
     setCameraPanelState(false);
-    const opened = openCameraPickerFallback();
-    setAiStatus(opened ? 'Kamera perangkat dibuka. Ambil foto lalu kembali ke app.' : 'Izin kamera ditolak atau tidak tersedia. Pakai pilihan galeri.', opened ? 'loading' : 'error');
+    showNativeCameraFallback(true);
+    setAiStatus('Kamera live gagal dibuka. Gunakan tombol Kamera Perangkat atau pilih dari galeri.', 'error');
   } finally {
     liveCameraOpening = false;
     if(openBtn){ openBtn.classList.remove('rk-working'); openBtn.disabled = false; }
@@ -1866,12 +1909,14 @@ async function captureLivePhoto(){
   if(btn){ btn.classList.add('rk-working'); btn.disabled = true; }
   try {
     if(!video || !canvas || !liveCameraStream){
-      setAiStatus('Kamera belum aktif. Tekan Buka Kamera Live lagi.', 'error');
+      showNativeCameraFallback(true);
+      setAiStatus('Kamera belum aktif. Buka Kamera Live lagi atau gunakan Kamera Perangkat.', 'error');
       return;
     }
     const ready = await waitForLiveVideoFrame(video);
     if(!ready){
-      setAiStatus('Kamera belum siap. Tunggu sebentar lalu tekan Ambil Foto lagi.', 'error');
+      showNativeCameraFallback(true);
+      setAiStatus('Kamera belum siap. Tunggu sebentar lalu tekan Ambil Foto lagi, atau gunakan Kamera Perangkat.', 'error');
       return;
     }
     const width = video.videoWidth || 1280;
@@ -1907,10 +1952,15 @@ async function captureLivePhoto(){
 
 function setupLiveCameraCapture(){
   $('openLiveCameraBtn')?.addEventListener('click', openLiveCamera);
+  $('openNativeCameraBtn')?.addEventListener('click', () => {
+    const opened = openCameraPickerFallback();
+    setAiStatus(opened ? 'Kamera perangkat dibuka. Ambil foto lalu kembali ke app.' : 'Kamera perangkat tidak bisa dibuka. Pilih dari galeri.', opened ? 'loading' : 'error');
+  });
   $('stopLiveCameraBtn')?.addEventListener('click', () => stopLiveCamera());
   $('captureLivePhotoBtn')?.addEventListener('click', captureLivePhoto);
   $('retakeLivePhotoBtn')?.addEventListener('click', openLiveCamera);
-  document.addEventListener('visibilitychange', () => { if(document.hidden) stopLiveCamera(false); });
+  window.addEventListener('pagehide', () => stopLiveCamera(false));
+  window.addEventListener('beforeunload', () => stopLiveCamera(false));
 }
 
 async function callExtractRecipeApi(payload){
@@ -2802,5 +2852,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.25 youtube rich caption scraper fix loaded');
+  console.log('Resep Keluarga v3.9.26 camera-stability-scraper-preserve loaded');
 });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rk-cache-v3925-youtube-scraper';
+const CACHE_NAME = 'rk-cache-v3926-youtube-scraper';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
