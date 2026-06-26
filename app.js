@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.9.8
+   Resep Keluarga v3.9.9
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -224,13 +224,34 @@ async function loginWithPassword(){
   const password = ($('loginPassword')?.value || '').trim();
   if(!email) return setAuthStatus('Masukkan email dulu.', 'error');
   if(!password) return setAuthStatus('Masukkan password dulu.', 'error');
+  const restoreBtn = setButtonBusy($('loginPasswordBtn'), 'Masuk...');
   setAuthStatus('Memproses login...', 'loading');
-  const { error } = await db.auth.signInWithPassword({ email, password });
-  if(error){
-    setAuthStatus('Gagal login: ' + friendlyAuthError(error), 'error');
-    return;
+  try{
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if(error){
+      setAuthStatus('Gagal login: ' + friendlyAuthError(error), 'error');
+      return;
+    }
+    currentUser = data?.user || data?.session?.user || null;
+    if(!currentUser){
+      const { data: sessionData } = await db.auth.getSession();
+      currentUser = sessionData?.session?.user || null;
+    }
+    if(!currentUser){
+      setAuthStatus('Login diterima, tetapi sesi belum terbaca. Refresh halaman sekali.', 'error');
+      return;
+    }
+    renderAuthState();
+    setAuthStatus(null);
+    await loadAll();
+    go('home');
+    showToast('Login berhasil. Resep keluarga siap dibuka.', 'success');
+  } catch(e){
+    console.error('Login gagal:', e);
+    setAuthStatus('Login gagal: ' + (e.message || 'coba lagi.'), 'error');
+  } finally {
+    restoreBtn();
   }
-  setAuthStatus('Login berhasil. Memuat resep keluarga...', 'success');
 }
 
 async function sendLoginEmail(){
@@ -1982,7 +2003,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga',
-    version: '3.9.8',
+    version: '3.9.9',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -2086,7 +2107,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.8</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.9</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2291,5 +2312,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.8 full authentic icon polish loaded');
+  console.log('Resep Keluarga v3.9.9 login session fix loaded');
 });

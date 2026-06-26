@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-keluarga-v3.9.8-full-icon-audit';
+const CACHE_NAME = 'resep-keluarga-v3.9.9-login-session-fix';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
