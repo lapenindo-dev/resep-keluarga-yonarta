@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-keluarga-v3.9.12-premium-foundation';
+const CACHE_NAME = 'resep-keluarga-v3.9.18-web-link-import';
 
 self.addEventListener('install', event => {
   self.skipWaiting();

@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.9.12
+   Resep Keluarga v3.9.13
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -10,6 +10,7 @@ let db;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
 catch(e){ console.error('Supabase init gagal:', e); }
 const PHOTO_BUCKET = 'recipe-photos';
+const APP_VERSION = '3.9.17';
 // v2.1.9: posisi Bantu Isi Resep dipindah di bawah Foto Resep / Tambahan.
 // v2.2.0: Foto Masakan dibuat responsive agar selalu rapi mengikuti lebar device.
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
@@ -42,11 +43,51 @@ let extraPhotosState = []; // urls for current form (existing + newly uploaded)
 let mealPlan = [];
 let recipeHistory = [];
 let recipeCollections = {};
+let liveCameraStream = null;
+let cameraCapturedDataUrls = [];
+let aiPhotoObjectUrls = [];
 const DEFAULT_COLLECTIONS = ['Resep Mama','Resep Oma','Menu Harian','Menu Anak','Hari Raya','Favorit Rumah'];
 
 const DEFAULT_UNITS = ['gr','kg','ml','liter','butir','buah','siung','ikat','lembar','sdm','sdt','cup','pcs'];
 const DEFAULT_GROUPS = ['Bahan Utama','Marinasi','Saus','Pelengkap','Bumbu Halus','Bumbu Tumis','Kuah','Topping','Lainnya'];
 const MEAL_LABELS = ['Siang','Malam'];
+
+const SETTINGS_KEY = 'rk-user-settings-v1';
+const appSettings = {
+  recipeViewMode: 'list'
+};
+
+function loadAppSettings(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if(saved.recipeViewMode === 'grid' || saved.recipeViewMode === 'list') appSettings.recipeViewMode = saved.recipeViewMode;
+  } catch(e){ appSettings.recipeViewMode = 'list'; }
+  applyRecipeViewMode();
+}
+
+function saveAppSettings(){
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings)); } catch(e){}
+}
+
+function applyRecipeViewMode(){
+  document.body.classList.toggle('recipe-view-grid', appSettings.recipeViewMode === 'grid');
+  document.body.classList.toggle('recipe-view-list', appSettings.recipeViewMode !== 'grid');
+  const listBtn = $('recipeViewListBtn');
+  const gridBtn = $('recipeViewGridBtn');
+  if(listBtn){ listBtn.classList.toggle('active', appSettings.recipeViewMode !== 'grid'); listBtn.setAttribute('aria-checked', appSettings.recipeViewMode !== 'grid' ? 'true' : 'false'); }
+  if(gridBtn){ gridBtn.classList.toggle('active', appSettings.recipeViewMode === 'grid'); gridBtn.setAttribute('aria-checked', appSettings.recipeViewMode === 'grid' ? 'true' : 'false'); }
+  const list = $('recipeList');
+  if(list){ list.classList.toggle('recipe-grid-list', appSettings.recipeViewMode === 'grid'); list.classList.toggle('recipe-single-list', appSettings.recipeViewMode !== 'grid'); }
+}
+
+function setRecipeViewMode(mode){
+  appSettings.recipeViewMode = mode === 'grid' ? 'grid' : 'list';
+  saveAppSettings();
+  applyRecipeViewMode();
+  renderRecipes();
+  showToast(appSettings.recipeViewMode === 'grid' ? '2 resep per baris aktif.' : '1 resep per baris aktif.', 'success');
+}
+window.setRecipeViewMode = setRecipeViewMode;
 // v2.1.3: login utama email/password; Magic Link tetap ada untuk email yang sudah terdaftar
 
 const $ = (id) => document.getElementById(id);
@@ -141,7 +182,7 @@ function renderAuthState(){
     mini.className = 'user-mini';
     titleWrap.appendChild(mini);
   }
-  if(mini) mini.textContent = currentUser?.email ? 'Login: ' + currentUser.email : '';
+  if(mini) mini.textContent = currentUser?.email ? 'Akun aktif' : '';
   updateAdminUI();
   renderTrustIdentity();
 }
@@ -934,6 +975,7 @@ function renderLatest(){
 }
 
 function renderRecipes(){
+  applyRecipeViewMode();
   const q = ($('searchInput').value || '').toLowerCase();
   const filtered = recipes.filter(r => {
     const hay = (JSON.stringify(r) + ' ' + flatIngredients(r.bahan).join(' ') + ' rating_keluarga ' + (r.rating_keluarga || '') + ' sumber_resep ' + normalizeRecipeSource(r.sumber_resep)).toLowerCase();
@@ -1553,7 +1595,10 @@ function setAiStatus(message, type){
 
 function clearAiPanel(){
   if($('aiPhotoInput')) $('aiPhotoInput').value = '';
+  cameraCapturedDataUrls = [];
+  releaseAiPhotoObjectUrls();
   if($('aiPhotoPreview')) $('aiPhotoPreview').innerHTML = '';
+  stopLiveCamera(false);
   if($('aiTextInput')) $('aiTextInput').value = '';
   setAiStatus(null);
 }
@@ -1610,6 +1655,105 @@ function estimateBase64SizeKB(dataUrl){
   return Math.round((base64Part.length * 0.75) / 1024);
 }
 
+
+function releaseAiPhotoObjectUrls(){
+  aiPhotoObjectUrls.forEach(url => { try { URL.revokeObjectURL(url); } catch(e){} });
+  aiPhotoObjectUrls = [];
+}
+
+function renderAiPhotoPreview(){
+  const preview = $('aiPhotoPreview');
+  if(!preview) return;
+  releaseAiPhotoObjectUrls();
+  const fileInput = $('aiPhotoInput');
+  const files = Array.from(fileInput?.files || []);
+  const cameraThumbs = cameraCapturedDataUrls.map(src => `<div class="extra-thumb camera-thumb"><img src="${src}" alt="Foto dari kamera" /><span class="camera-source-chip">Kamera</span></div>`);
+  const fileThumbs = files.map(f => {
+    const url = URL.createObjectURL(f);
+    aiPhotoObjectUrls.push(url);
+    return `<div class="extra-thumb"><img src="${url}" alt="Foto input" /></div>`;
+  });
+  preview.innerHTML = [...cameraThumbs, ...fileThumbs].join('');
+  const total = cameraCapturedDataUrls.length + files.length;
+  setAiStatus(total ? `${total} foto siap diekstrak.` : null, 'loading');
+}
+
+function setCameraPanelState(open){
+  const panel = $('liveCameraPanel');
+  const openBtn = $('openLiveCameraBtn');
+  const stopBtn = $('stopLiveCameraBtn');
+  if(panel) panel.hidden = !open;
+  if(openBtn) openBtn.hidden = open;
+  if(stopBtn) stopBtn.hidden = !open;
+}
+
+async function openLiveCamera(){
+  if(!navigator.mediaDevices?.getUserMedia){
+    setAiStatus('Kamera live tidak tersedia di browser ini. Pakai galeri.', 'error');
+    return;
+  }
+  try {
+    stopLiveCamera(false);
+    setAiStatus('Membuka kamera...', 'loading');
+    liveCameraStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    });
+    const video = $('liveCameraVideo');
+    if(video){
+      video.srcObject = liveCameraStream;
+      await video.play().catch(()=>{});
+    }
+    setCameraPanelState(true);
+    if($('retakeLivePhotoBtn')) $('retakeLivePhotoBtn').hidden = cameraCapturedDataUrls.length === 0;
+    setAiStatus('Arahkan kamera ke resep, lalu ambil foto.', 'loading');
+  } catch(err){
+    setCameraPanelState(false);
+    setAiStatus('Izin kamera ditolak atau tidak tersedia. Pakai pilihan galeri.', 'error');
+  }
+}
+
+function stopLiveCamera(clearStatus = true){
+  if(liveCameraStream){
+    liveCameraStream.getTracks().forEach(track => track.stop());
+    liveCameraStream = null;
+  }
+  const video = $('liveCameraVideo');
+  if(video) video.srcObject = null;
+  setCameraPanelState(false);
+  if(clearStatus && !cameraCapturedDataUrls.length) setAiStatus(null);
+}
+
+function captureLivePhoto(){
+  const video = $('liveCameraVideo');
+  const canvas = $('liveCameraCanvas');
+  if(!video || !canvas || !video.videoWidth){
+    setAiStatus('Kamera belum siap. Coba ulangi.', 'error');
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  cameraCapturedDataUrls = [canvas.toDataURL('image/jpeg', 0.86)];
+  if($('retakeLivePhotoBtn')) $('retakeLivePhotoBtn').hidden = false;
+  renderAiPhotoPreview();
+  stopLiveCamera(false);
+  setAiStatus('Foto kamera siap. Tekan Baca & Rapikan.', 'success');
+}
+
+function setupLiveCameraCapture(){
+  $('openLiveCameraBtn')?.addEventListener('click', openLiveCamera);
+  $('stopLiveCameraBtn')?.addEventListener('click', () => stopLiveCamera());
+  $('captureLivePhotoBtn')?.addEventListener('click', captureLivePhoto);
+  $('retakeLivePhotoBtn')?.addEventListener('click', openLiveCamera);
+  document.addEventListener('visibilitychange', () => { if(document.hidden) stopLiveCamera(false); });
+}
+
 async function callExtractRecipeApi(payload){
   const resp = await fetch('/api/extract-recipe', {
     method: 'POST',
@@ -1634,6 +1778,7 @@ function applyExtractedRecipe(recipe, sourceLabel){
   if(Array.isArray(recipe.tag) && recipe.tag.length){
     $('tag').value = recipe.tag.join(', ');
   }
+  if(recipe.link_sumber && $('link_sumber')) $('link_sumber').value = recipe.link_sumber;
   if(Array.isArray(recipe.bahan) && recipe.bahan.length){
     ingredientGroupsState = normalizeIngredientGroups(recipe.bahan);
     renderIngredientGroups();
@@ -1645,12 +1790,14 @@ function applyExtractedRecipe(recipe, sourceLabel){
 
 async function handleAiExtractPhoto(){
   const files = Array.from($('aiPhotoInput').files || []);
-  if(!files.length) return setAiStatus('Pilih minimal 1 foto dulu.', 'error');
-  setAiStatus(`Mengompres ${files.length} foto...`, 'loading');
+  const captured = [...cameraCapturedDataUrls];
+  const totalCount = files.length + captured.length;
+  if(!totalCount) return setAiStatus('Ambil foto kamera atau pilih dari galeri dulu.', 'error');
+  setAiStatus(files.length ? `Mengompres ${files.length} foto...` : 'Menyiapkan foto kamera...', 'loading');
   try {
-    const images = await Promise.all(files.map(f => compressImageFile(f)));
-    const totalKB = images.reduce((sum, img) => sum + estimateBase64SizeKB(img), 0);
-    setAiStatus(`Membaca ${files.length} foto...`, 'loading');
+    const uploadedImages = files.length ? await Promise.all(files.map(f => compressImageFile(f))) : [];
+    const images = [...captured, ...uploadedImages];
+    setAiStatus(`Membaca ${images.length} foto...`, 'loading');
     const recipe = await callExtractRecipeApi({ mode: 'photo', imagesBase64: images });
     const source = $('aiPhotoSource')?.value || $('sumber_resep')?.value || 'Keluarga';
     applyExtractedRecipe(recipe, source);
@@ -1669,6 +1816,30 @@ async function handleAiExtractText(){
     applyExtractedRecipe(recipe, source);
   } catch(err){
     setAiStatus(err.message, 'error');
+  }
+}
+
+async function handleAiExtractLink(){
+  const url = ($('aiLinkInput')?.value || '').trim();
+  const source = $('aiLinkSource')?.value || 'Internet';
+  if(!url) return setAiStatus('Tempel link resep dulu.', 'error');
+  let normalizedUrl = '';
+  try {
+    const u = new URL(url);
+    if(!['http:', 'https:'].includes(u.protocol)) throw new Error('invalid');
+    normalizedUrl = u.href;
+  } catch(e){
+    return setAiStatus('Format link belum valid. Gunakan link lengkap mulai dari https://', 'error');
+  }
+  if($('link_sumber')) $('link_sumber').value = normalizedUrl;
+  if($('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(source || 'Internet');
+  setAiStatus('Mengambil isi link...', 'loading');
+  try {
+    const recipe = await callExtractRecipeApi({ mode: 'url', url: normalizedUrl });
+    recipe.link_sumber = recipe.link_sumber || normalizedUrl;
+    applyExtractedRecipe(recipe, source || 'Internet');
+  } catch(err){
+    setAiStatus(err.message || 'Gagal mengambil resep dari link.', 'error');
   }
 }
 
@@ -1695,6 +1866,7 @@ window.selectAiTab = function(name){
     p.classList.toggle('active', p.dataset.aipanel === targetName);
     p.hidden = p.dataset.aipanel !== targetName;
   });
+  if(targetName !== 'photo-caption') stopLiveCamera(false);
   setAiStatus(null);
   if(targetName === 'manual') setTimeout(() => $('nama_resep')?.focus(), 80);
 };
@@ -2189,7 +2361,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.12</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.13</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2203,10 +2375,55 @@ window.printRecipe = (id) => {
   w.document.close();
 };
 
+
+
+/* v3.9.16 — Soft Heritage Press Interaction */
+function initHeritagePressFeedback(){
+  const interactiveSelector = [
+    'button',
+    '[role="button"]',
+    '.chip',
+    '.tag-pill',
+    '.collection-pill',
+    '.metric-pill',
+    '.recipe-card',
+    '.clickable-card'
+  ].join(',');
+
+  const shouldSkipPressFeedback = (el) => {
+    if(!el) return true;
+    if(el.disabled || el.getAttribute('aria-disabled') === 'true') return true;
+    if(el.classList.contains('no-heritage-press')) return true;
+    if(el.closest('.no-heritage-press')) return true;
+    return false;
+  };
+
+  const applyPressFeedback = (target) => {
+    const el = target?.closest?.(interactiveSelector);
+    if(shouldSkipPressFeedback(el)) return;
+    el.classList.remove('rk-working','rk-success-pulse');
+    void el.offsetWidth;
+    el.classList.add('rk-working');
+    window.setTimeout(() => {
+      el.classList.remove('rk-working');
+      el.classList.add('rk-success-pulse');
+      window.setTimeout(() => el.classList.remove('rk-success-pulse'), 620);
+    }, 360);
+  };
+
+  document.addEventListener('click', (e) => applyPressFeedback(e.target), true);
+  document.addEventListener('keydown', (e) => {
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    applyPressFeedback(e.target);
+  }, true);
+}
+
 /* ========== INIT — all event handlers ========== */
 
 document.addEventListener('DOMContentLoaded', () => {
   enforceLightMode();
+  initHeritagePressFeedback();
+  loadAppSettings();
   initBrowserBackGuard();
   if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations?.().then(regs => regs.forEach(r => r.update())).catch(()=>{}); }
   if($('loginPasswordBtn')) $('loginPasswordBtn').addEventListener('click', loginWithPassword);
@@ -2222,6 +2439,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if($('settingsLogoutBtn')) $('settingsLogoutBtn').addEventListener('click', logout);
   if($('forceLightModeBtn')) $('forceLightModeBtn').addEventListener('click', () => { enforceLightMode(); showToast('Light mode sudah dikunci.', 'success'); });
   if($('openHubFromSettingsBtn')) $('openHubFromSettingsBtn').addEventListener('click', openFamilyHub);
+  if($('recipeViewListBtn')) $('recipeViewListBtn').addEventListener('click', () => setRecipeViewMode('list'));
+  if($('recipeViewGridBtn')) $('recipeViewGridBtn').addEventListener('click', () => setRecipeViewMode('grid'));
   if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').addEventListener('click', () => {
     const panel = document.querySelector('.advanced-fields-panel');
     const open = !panel?.classList.contains('open');
@@ -2380,13 +2599,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // AI Recipe Extraction
   setupAiTabs();
-  $('aiExtractPhotoBtn').addEventListener('click', handleAiExtractPhoto);
-  $('aiExtractTextBtn').addEventListener('click', handleAiExtractText);
-  $('aiPhotoInput').addEventListener('change', () => {
-    const files = Array.from($('aiPhotoInput').files || []);
-    $('aiPhotoPreview').innerHTML = files.map(f => `<div class="extra-thumb"><img src="${URL.createObjectURL(f)}" alt="Foto input" /></div>`).join('');
-    setAiStatus(files.length ? `${files.length} foto siap diekstrak.` : null, 'loading');
-  });
+  setupLiveCameraCapture();
+  $('aiExtractPhotoBtn')?.addEventListener('click', handleAiExtractPhoto);
+  $('aiExtractTextBtn')?.addEventListener('click', handleAiExtractText);
+  $('aiExtractLinkBtn')?.addEventListener('click', handleAiExtractLink);
+  $('aiLinkInput')?.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); handleAiExtractLink(); } });
+  $('aiPhotoInput')?.addEventListener('change', renderAiPhotoPreview);
 
   // Photo viewer zoom
   setupPhotoViewerEvents();
@@ -2403,5 +2621,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.12 premium foundation loaded');
+  console.log('Resep Keluarga v3.9.18 web link import loaded');
 });
