@@ -17,10 +17,11 @@ Keluarkan HANYA JSON valid (tanpa markdown, tanpa backtick, tanpa penjelasan tam
     { "nama_grup": "Bahan Utama", "items": [ { "nama_bahan": "string", "jumlah": angka_atau_string, "satuan": "string" } ] }
   ],
   "cara_memasak": ["langkah 1", "langkah 2"],
-  "tag": ["tag1", "tag2"]
+  "tag": ["tag1", "tag2"],
+  "foto_url": "string_atau_null"
 }
 
-Jika informasi tidak tersedia/tidak jelas, isi null untuk angka atau array kosong [] — JANGAN mengarang data yang tidak ada di sumber.
+Jika informasi tidak tersedia/tidak jelas, isi null untuk angka/foto atau array kosong [] — JANGAN mengarang data yang tidak ada di sumber.
 Gunakan Bahasa Indonesia untuk semua isi teks.`;
 
 function extractJson(text) {
@@ -229,6 +230,369 @@ function mergeLongestText(current = '', candidate = '') {
   return current;
 }
 
+function normalizeYoutubeText(text = '') {
+  return decodeHtmlEntities(String(text || ''))
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function recipeTextScore(text = '') {
+  const t = normalizeYoutubeText(text);
+  if (!t) return 0;
+  let score = Math.min(t.length, 12000) / 120;
+  const recipeHits = (t.match(/\b(bahan|resep|cara|langkah|masak|goreng|kukus|panggang|tumis|adonan|minyak|tepung|garam|gula|sdt|sdm|gram|gr\b|kg\b|ml\b|butir|siung|iris|cincang|ingredient|instructions|method)\b/gi) || []).length;
+  score += recipeHits * 12;
+  const timeCodeHits = (t.match(/\b\d{1,2}:\d{2}\b/g) || []).length;
+  score -= Math.min(timeCodeHits * 8, 80);
+  return score;
+}
+
+function pushTextCandidate(out, text, label = '') {
+  const clean = normalizeYoutubeText(text);
+  if (!clean || clean.length < 20) return;
+  out.push({ label, text: clean, score: recipeTextScore(clean) });
+}
+
+function collectYoutubeDescriptionCandidates(node, out = [], path = '') {
+  if (!node) return out;
+  if (Array.isArray(node)) {
+    node.forEach((v, i) => collectYoutubeDescriptionCandidates(v, out, `${path}.${i}`));
+    return out;
+  }
+  if (typeof node !== 'object') return out;
+
+  if (node.attributedDescription?.content) pushTextCandidate(out, node.attributedDescription.content, `${path}.attributedDescription.content`);
+  if (node.shortDescription) pushTextCandidate(out, node.shortDescription, `${path}.shortDescription`);
+  if (node.description) {
+    const desc = getTextFromYoutubeRuns(node.description);
+    pushTextCandidate(out, desc, `${path}.description`);
+  }
+  if (/description/i.test(path)) {
+    const text = getTextFromYoutubeRuns(node);
+    pushTextCandidate(out, text, path);
+  }
+  if (node.expandableVideoDescriptionBodyRenderer || node.structuredDescriptionContentRenderer || node.videoDescriptionHeaderRenderer) {
+    const text = collectTextRuns(node, []).join('\n');
+    pushTextCandidate(out, text, `${path}.renderer`);
+  }
+
+  for (const [k, v] of Object.entries(node)) {
+    if (typeof v === 'object') collectYoutubeDescriptionCandidates(v, out, path ? `${path}.${k}` : k);
+  }
+  return out;
+}
+
+function bestYoutubeDescriptionFromCandidates(candidates = []) {
+  const unique = [];
+  const seen = new Set();
+  for (const c of candidates) {
+    const key = c.text.slice(0, 500);
+    if (!seen.has(key)) { seen.add(key); unique.push(c); }
+  }
+  unique.sort((a, b) => b.score - a.score || b.text.length - a.text.length);
+  return unique[0]?.text || '';
+}
+
+function extractYoutubeDescriptionFromHtml(html = '') {
+  const candidates = [];
+  const patterns = [
+    /"shortDescription"\s*:\s*"((?:\\.|[^"\\])*)"/g,
+    /"attributedDescription"\s*:\s*\{\s*"content"\s*:\s*"((?:\\.|[^"\\])*)"/g,
+    /"description"\s*:\s*\{\s*"simpleText"\s*:\s*"((?:\\.|[^"\\])*)"/g
+  ];
+  for (const re of patterns) {
+    let m;
+    while ((m = re.exec(html))) {
+      try { pushTextCandidate(candidates, JSON.parse(`"${m[1]}"`), 'html-regex'); } catch(e) { pushTextCandidate(candidates, m[1], 'html-regex-raw'); }
+    }
+  }
+  return bestYoutubeDescriptionFromCandidates(candidates);
+}
+
+async function fetchYoutubeNext(videoId) {
+  if (!videoId) return null;
+  const keys = [process.env.YOUTUBE_INNERTUBE_KEY, 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'].filter(Boolean);
+  const clients = [
+    { clientName: 'WEB', clientVersion: '2.20240304.00.00' },
+    { clientName: 'ANDROID', clientVersion: '19.09.37', androidSdkVersion: 30 }
+  ];
+  for (const key of keys) {
+    for (const client of clients) {
+      try {
+        const resp = await fetch(`https://www.youtube.com/youtubei/v1/next?key=${encodeURIComponent(key)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+            'User-Agent': client.clientName === 'ANDROID'
+              ? 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip'
+              : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36',
+            'Origin': 'https://www.youtube.com',
+            'Referer': `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
+          },
+          body: JSON.stringify({
+            context: { client, user: { lockedSafetyMode: false }, request: { useSsl: true } },
+            videoId,
+            contentCheckOk: true,
+            racyCheckOk: true
+          })
+        });
+        if (!resp.ok) continue;
+        const data = await resp.json();
+        const candidates = collectYoutubeDescriptionCandidates(data, []);
+        const description = bestYoutubeDescriptionFromCandidates(candidates);
+        const headerRuns = collectTextRuns(data?.contents?.twoColumnWatchNextResults?.results?.results?.contents?.[0], []).join(' ');
+        return { description, headerRuns };
+      } catch(e) { /* try next */ }
+    }
+  }
+  return null;
+}
+
+function extractImageUrlFromSourceText(sourceText = '') {
+  return (sourceText.match(/(?:Thumbnail|Gambar utama|Image):\s*(https?:\/\/\S+)/i)?.[1] || '').trim();
+}
+
+function extractTitleFromSourceText(sourceText = '') {
+  return (sourceText.match(/Judul:\s*([^\n]+)/i)?.[1] || '').trim().replace(/^[-–]\s*/, '');
+}
+
+function extractMainDescriptionBlock(sourceText = '') {
+  const m = sourceText.match(/DESKRIPSI\/CAPTION YOUTUBE LENGKAP:\n([\s\S]*?)(?:\n\nCatatan|\n\nURL:|$)/i);
+  return normalizeYoutubeText(m?.[1] || sourceText);
+}
+
+function normalizeCaptionLines(text = '') {
+  return normalizeYoutubeText(text)
+    .split('\n')
+    .map(x => x.trim())
+    .filter(Boolean)
+    .filter(x => !/^https?:\/\//i.test(x))
+    .filter(x => !/^#/.test(x))
+    .filter(x => !/^[-=]{3,}$/.test(x))
+    .filter(x => !/^\[[A-Z ]+\]$/.test(x));
+}
+
+function parseIngredientLine(line = '') {
+  const clean = line.replace(/^[-•*]\s*/, '').trim();
+  const m = clean.match(/^([\d¼½¾.,\/\s+-]+)\s*([a-zA-ZÀ-ÿ]+)?\s+(.+)$/);
+  if (m) {
+    return { jumlah: m[1].trim(), satuan: (m[2] || '').trim(), nama_bahan: m[3].trim() };
+  }
+  return { jumlah: '', satuan: '', nama_bahan: clean };
+}
+
+function fallbackParseRecipeFromSource(sourceText = {}) {
+  const text = extractMainDescriptionBlock(sourceText);
+  const lines = normalizeCaptionLines(text);
+  const groups = [];
+  let currentGroup = null;
+  let inSteps = false;
+  const steps = [];
+  const stopLine = /^(english|ingredients|instructions|instagram|follow|subscribe|music|source|video|link|===)/i;
+  const ingredientHeader = /^(bahan|ingredients?)\b([^:：]*)[:：]?/i;
+  const stepHeader = /^(cara|langkah|membuat|cara membuat|cara memasak|directions?|instructions?|method)\b/i;
+
+  for (const raw of lines) {
+    let line = raw.replace(/^\d{1,2}:\d{2}\s*:?\s*/, '').trim();
+    if (!line || stopLine.test(line)) continue;
+    if (/^\d{1,2}:\d{2}\b/.test(raw)) continue;
+
+    if (stepHeader.test(line)) {
+      inSteps = true;
+      continue;
+    }
+
+    if (/^resep\b/i.test(line) && !currentGroup && !inSteps) continue;
+
+    const ih = line.match(ingredientHeader);
+    if (ih && !inSteps) {
+      const name = line.replace(/[:：]\s*$/, '').trim() || 'Bahan';
+      currentGroup = { nama_grup: name, items: [] };
+      groups.push(currentGroup);
+      continue;
+    }
+
+    const looksIngredient = /(\b\d+[\d¼½¾.,\/\s-]*\s*(gr|gram|g|kg|ml|l|liter|sdm|sdt|tsp|tbsp|cup|cups|siung|butir|buah|lembar|batang|ruas|pcs|pc|ekor|sendok)\b|secukupnya|garam|gula|tepung|minyak|bawang|telur|ayam|daging|santan|air\b)/i.test(line);
+    if (!inSteps && looksIngredient) {
+      if (!currentGroup) {
+        currentGroup = { nama_grup: 'Bahan', items: [] };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(parseIngredientLine(line));
+      continue;
+    }
+
+    const numbered = line.match(/^\d+[.)]\s*(.+)$/);
+    const looksStep = /(campur|aduk|masukkan|tuang|panaskan|goreng|rebus|kukus|panggang|tumis|potong|iris|haluskan|diamkan|masak|sajikan|blender|uleg|bentuk)/i.test(line);
+    if (inSteps || numbered || looksStep) {
+      const step = (numbered ? numbered[1] : line).trim();
+      if (step.length > 8) steps.push(step);
+    }
+  }
+
+  groups.forEach(g => { g.items = g.items.filter(i => i.nama_bahan && i.nama_bahan.length > 1); });
+  const bahan = groups.filter(g => g.items.length);
+  return { bahan, cara_memasak: steps.slice(0, 40) };
+}
+
+function hasUsableIngredients(groups) {
+  return Array.isArray(groups) && groups.some(g => Array.isArray(g.items) && g.items.some(i => i && i.nama_bahan));
+}
+
+function hasUsableSteps(steps) {
+  return Array.isArray(steps) && steps.some(s => String(s || '').trim().length > 4);
+}
+
+
+function inferIngredientMainFromText(text = '') {
+  const t = text.toLowerCase();
+  if (/\bbabi\b|pork|samcan|kaki babi|lapchiong/.test(t)) return 'Babi';
+  if (/\bayam\b|chicken/.test(t)) return 'Ayam';
+  if (/\bsapi\b|beef/.test(t)) return 'Sapi';
+  if (/udang|ikan|cumi|seafood|kerang/.test(t)) return 'Seafood';
+  if (/telur|egg/.test(t)) return 'Telur';
+  if (/tahu|tempe/.test(t)) return 'Tahu dan Tempe';
+  if (/sayur|kangkung|bayam|wortel|brokoli/.test(t)) return 'Sayur';
+  return 'Lainnya';
+}
+
+function inferDishTypeFromText(text = '') {
+  const t = text.toLowerCase();
+  if (/goreng|fried/.test(t)) return 'Goreng';
+  if (/tumis|oseng|saute/.test(t)) return 'Tumis';
+  if (/panggang|bakar|oven|roast|grill/.test(t)) return 'Panggang';
+  if (/sup|sop|kuah|soto/.test(t)) return 'Sup dan Kuah';
+  if (/mie|noodle/.test(t)) return 'Mie';
+  if (/nasi|rice/.test(t)) return 'Nasi';
+  if (/cemilan|snack|bakso|ball|perkedel/.test(t)) return 'Cemilan';
+  if (/dessert|puding|cake|kue|bolu/.test(t)) return 'Dessert';
+  if (/saus|sambal|bumbu/.test(t)) return 'Saus dan Bumbu';
+  if (/minuman|drink|juice|jus/.test(t)) return 'Minuman';
+  return 'Lainnya';
+}
+
+function extractTagsFromText(text = '') {
+  const tags = new Set();
+  for (const m of String(text).matchAll(/#([\p{L}\p{N}_-]+)/gu)) tags.add(m[1]);
+  const lower = text.toLowerCase();
+  ['youtube','warisan','keluarga','goreng','tumis','panggang','cemilan','ayam','babi','sapi','seafood'].forEach(t => { if (lower.includes(t)) tags.add(t); });
+  return [...tags].slice(0, 8);
+}
+
+function buildFallbackRecipeFromSource(sourceText = '', url = '') {
+  const title = extractTitleFromSourceText(sourceText) || 'Resep dari Link';
+  const parsed = fallbackParseRecipeFromSource(sourceText);
+  const imageUrl = extractImageUrlFromSourceText(sourceText) || null;
+  const joined = `${title}\n${sourceText}`;
+  return {
+    nama_resep: title,
+    bahan_utama: inferIngredientMainFromText(joined),
+    jenis_hidangan: inferDishTypeFromText(joined),
+    durasi_menit: null,
+    porsi: null,
+    bahan: parsed.bahan || [],
+    cara_memasak: parsed.cara_memasak || [],
+    tag: extractTagsFromText(joined),
+    foto_url: imageUrl,
+    link_sumber: url || ''
+  };
+}
+
+function mergeRecipeWithFallback(recipe = {}, fallback = {}) {
+  const out = { ...fallback, ...recipe };
+  if (!out.nama_resep || out.nama_resep === '-' || /^resep dari link$/i.test(out.nama_resep)) out.nama_resep = fallback.nama_resep || out.nama_resep;
+  if (!hasUsableIngredients(out.bahan) && hasUsableIngredients(fallback.bahan)) out.bahan = fallback.bahan;
+  if (!hasUsableSteps(out.cara_memasak) && hasUsableSteps(fallback.cara_memasak)) out.cara_memasak = fallback.cara_memasak;
+  if (!out.foto_url && fallback.foto_url) out.foto_url = fallback.foto_url;
+  if (!out.bahan_utama || out.bahan_utama === 'Lainnya') out.bahan_utama = fallback.bahan_utama || out.bahan_utama || 'Lainnya';
+  if (!out.jenis_hidangan || out.jenis_hidangan === 'Lainnya') out.jenis_hidangan = fallback.jenis_hidangan || out.jenis_hidangan || 'Lainnya';
+  if ((!Array.isArray(out.tag) || !out.tag.length) && Array.isArray(fallback.tag)) out.tag = fallback.tag;
+  return out;
+}
+
+function enhanceRecipeWithFallback(recipe = {}, sourceText = '') {
+  const fallback = fallbackParseRecipeFromSource(sourceText);
+  if (!hasUsableIngredients(recipe.bahan) && fallback.bahan.length) {
+    recipe.bahan = fallback.bahan;
+  }
+  if (!hasUsableSteps(recipe.cara_memasak) && fallback.cara_memasak.length) {
+    recipe.cara_memasak = fallback.cara_memasak;
+  }
+  return recipe;
+}
+
+
+async function fetchYoutubeGetVideoInfo(videoId) {
+  if (!videoId) return null;
+  const urls = [
+    `https://www.youtube.com/get_video_info?video_id=${encodeURIComponent(videoId)}&html5=1&c=WEB&cver=2.20240304.00.00&hl=id&gl=ID`,
+    `https://www.youtube.com/get_video_info?video_id=${encodeURIComponent(videoId)}&html5=1&c=ANDROID&cver=19.09.37&hl=id&gl=ID`
+  ];
+  for (const u of urls) {
+    try {
+      const resp = await fetch(u, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36',
+          'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
+        }
+      });
+      if (!resp.ok) continue;
+      const text = await resp.text();
+      const params = new URLSearchParams(text);
+      const playerRaw = params.get('player_response');
+      if (!playerRaw) continue;
+      const player = JSON.parse(playerRaw);
+      const vd = player.videoDetails || {};
+      return {
+        title: vd.title || '',
+        channel: vd.author || '',
+        description: vd.shortDescription || '',
+        thumbnail: pickBestYoutubeThumbnail(vd.thumbnail?.thumbnails) || ''
+      };
+    } catch(e) { /* next */ }
+  }
+  return null;
+}
+
+async function fetchYoutubePublicSnippet(videoId) {
+  if (!videoId) return null;
+  const endpoints = [
+    `https://yt.lemnoslife.com/videos?part=snippet&id=${encodeURIComponent(videoId)}`,
+    `https://piped.video/api/v1/watch?v=${encodeURIComponent(videoId)}`
+  ];
+  for (const url of endpoints) {
+    try {
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 ResepKeluargaBot/1.0' } });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (Array.isArray(data.items) && data.items[0]?.snippet) {
+        const sn = data.items[0].snippet;
+        return {
+          title: sn.title || '',
+          channel: sn.channelTitle || sn.channelId || '',
+          description: sn.description || '',
+          thumbnail: sn.thumbnails?.maxres?.url || sn.thumbnails?.standard?.url || sn.thumbnails?.high?.url || sn.thumbnails?.medium?.url || ''
+        };
+      }
+      if (data && (data.description || data.title || data.thumbnailUrl)) {
+        return {
+          title: data.title || '',
+          channel: data.uploader || data.uploaderName || '',
+          description: data.description || '',
+          thumbnail: data.thumbnailUrl || data.thumbnail || ''
+        };
+      }
+    } catch(e) { /* next */ }
+  }
+  return null;
+}
+
 async function fetchYoutubeDataApi(videoId) {
   const key = process.env.YOUTUBE_API_KEY || process.env.GOOGLE_YOUTUBE_API_KEY || '';
   if (!key || !videoId) return null;
@@ -325,6 +689,26 @@ async function fetchYoutubeRichSource(parsed) {
   } catch(e) { pageHints += `\nCatatan YouTube Data API: ${e.message}`; }
 
   try {
+    const infoData = await fetchYoutubeGetVideoInfo(videoId);
+    if (infoData) {
+      title = infoData.title || title;
+      channel = infoData.channel || channel;
+      thumbnail = infoData.thumbnail || thumbnail;
+      description = mergeLongestText(description, infoData.description);
+    }
+  } catch(e) { pageHints += `\nCatatan YouTube get_video_info: ${e.message}`; }
+
+  try {
+    const publicData = await fetchYoutubePublicSnippet(videoId);
+    if (publicData) {
+      title = publicData.title || title;
+      channel = publicData.channel || channel;
+      thumbnail = publicData.thumbnail || thumbnail;
+      description = mergeLongestText(description, publicData.description);
+    }
+  } catch(e) { pageHints += `\nCatatan YouTube public snippet: ${e.message}`; }
+
+  try {
     const innerData = await fetchYoutubeInnertube(videoId);
     if (innerData) {
       title = innerData.title || title;
@@ -333,6 +717,13 @@ async function fetchYoutubeRichSource(parsed) {
       description = mergeLongestText(description, innerData.description);
     }
   } catch(e) { pageHints += `\nCatatan YouTube Innertube: ${e.message}`; }
+
+  try {
+    const nextData = await fetchYoutubeNext(videoId);
+    if (nextData?.description) {
+      description = mergeLongestText(description, nextData.description);
+    }
+  } catch(e) { pageHints += `\nCatatan YouTube Next API: ${e.message}`; }
 
   const watchUrl = videoId ? `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}` : parsed.href;
   try {
@@ -346,6 +737,12 @@ async function fetchYoutubeRichSource(parsed) {
     });
     if (resp.ok) {
       const html = (await resp.text()).slice(0, 900000);
+      const htmlDescription = extractYoutubeDescriptionFromHtml(html);
+      if (htmlDescription) description = mergeLongestText(description, htmlDescription);
+      const metaThumb = pickMeta(html, 'og:image') || pickMeta(html, 'twitter:image');
+      if (metaThumb) thumbnail = metaThumb || thumbnail;
+      const metaTitle = pickMeta(html, 'og:title') || pickMeta(html, 'twitter:title');
+      if (metaTitle) title = title || metaTitle;
       const marker = 'ytInitialPlayerResponse';
       const markerIndex = html.indexOf(marker);
       if (markerIndex >= 0) {
@@ -374,7 +771,7 @@ async function fetchYoutubeRichSource(parsed) {
         const texts = collectTextRuns(initialData, []).join('\n');
         const possibleLines = texts.split('\n').map(x => x.trim()).filter(Boolean);
         const recipeish = possibleLines.filter(x => /(bahan|resep|sdt|sdm|gram|gr\b|kg\b|cara|masak|goreng|kukus|panggang|minutes|ingredient|recipe)/i.test(x)).join('\n');
-        if (recipeish.length > description.length) description = recipeish.slice(0, 12000);
+        if (recipeTextScore(recipeish) > recipeTextScore(description)) description = recipeish.slice(0, 12000);
       }
     }
   } catch(e) {
@@ -432,10 +829,10 @@ async function fetchUrlSource(sourceUrl) {
     const bodyText = cleanHtmlToText(html).slice(0, 16000);
     return [
       `URL: ${parsed.href}`,
-      isYoutube ? 'Jenis sumber: YouTube/video. Catatan: transcript otomatis mungkin tidak tersedia; gunakan judul, deskripsi, dan teks halaman yang bisa dibaca.' : 'Jenis sumber: website/web page.',
-      youtubeInfo,
+      'Jenis sumber: website/web page.',
       `Judul: ${ogTitle || title || '-'}`,
       `Deskripsi: ${metaDescription || '-'}`,
+      (pickMeta(html, 'og:image') || pickMeta(html, 'twitter:image')) ? `Gambar utama: ${pickMeta(html, 'og:image') || pickMeta(html, 'twitter:image')}` : '',
       schemaRecipes ? `Recipe schema terdeteksi:\n${schemaRecipes}` : '',
       `Teks halaman:\n${bodyText}`
     ].filter(Boolean).join('\n\n');
@@ -482,19 +879,39 @@ export default async function handler(req, res) {
       ];
     } else if (mode === 'url') {
       if (!url || !String(url).trim()) throw new Error('Link tidak boleh kosong.');
-      const sourceText = await fetchUrlSource(String(url).trim());
+      const cleanUrl = String(url).trim();
+      const sourceText = await fetchUrlSource(cleanUrl);
+      const fallbackRecipe = buildFallbackRecipeFromSource(sourceText, cleanUrl);
+
       model = 'qwen-plus';
       messages = [
         { role: 'system', content: RECIPE_SCHEMA_PROMPT },
-        { role: 'user', content: `Ekstrak resep dari sumber web/link berikut. Untuk YouTube, fokus utama adalah bagian DESKRIPSI/CAPTION YOUTUBE LENGKAP karena biasanya berisi bahan dan cara memasak. Ambil judul, bahan-bahan, takaran, langkah memasak, porsi, durasi, dan tag dari teks yang benar-benar tersedia. Jika bagian DESKRIPSI/CAPTION YOUTUBE LENGKAP berisi daftar bahan dan cara memasak, pindahkan semuanya ke field bahan dan cara_memasak. Jika ada timecode, abaikan sebagai resep kecuali membantu urutan langkah. Jangan hanya mengambil judul. Jangan mengarang bahan atau langkah yang tidak ada. Kembalikan JSON resep sesuai skema:\n\n${sourceText.slice(0, 18000)}` }
+        { role: 'user', content: `Ekstrak resep dari sumber web/link berikut. Untuk YouTube, fokus utama adalah bagian DESKRIPSI/CAPTION YOUTUBE LENGKAP karena biasanya berisi bahan dan cara memasak. Ambil judul, bahan-bahan, takaran, langkah memasak, porsi, durasi, foto/thumbnail jika tersedia, dan tag dari teks yang benar-benar tersedia. Jika bagian DESKRIPSI/CAPTION YOUTUBE LENGKAP berisi daftar bahan dan cara memasak, pindahkan semuanya ke field bahan dan cara_memasak. Jika ada timecode, abaikan sebagai resep kecuali membantu urutan langkah. Jangan hanya mengambil judul. Jangan mengarang bahan atau langkah yang tidak ada. Kembalikan JSON resep sesuai skema:
+
+${sourceText.slice(0, 22000)}` }
       ];
+
+      try {
+        const raw = await callQwen({ model, messages });
+        const aiRecipe = extractJson(raw);
+        const recipe = mergeRecipeWithFallback(aiRecipe, fallbackRecipe);
+        recipe.link_sumber = cleanUrl;
+        res.status(200).json({ recipe });
+        return;
+      } catch (aiErr) {
+        if (fallbackRecipe.nama_resep || hasUsableIngredients(fallbackRecipe.bahan) || hasUsableSteps(fallbackRecipe.cara_memasak) || fallbackRecipe.foto_url) {
+          fallbackRecipe.link_sumber = cleanUrl;
+          res.status(200).json({ recipe: fallbackRecipe, warning: `AI belum aktif: ${aiErr.message}` });
+          return;
+        }
+        throw aiErr;
+      }
     } else {
       throw new Error('Mode tidak dikenali. Gunakan: photo, text, atau url.');
     }
 
     const raw = await callQwen({ model, messages });
     const recipe = extractJson(raw);
-    if (mode === 'url' && url) recipe.link_sumber = String(url).trim();
     res.status(200).json({ recipe });
   } catch (err) {
     res.status(400).json({ error: err.message || 'Terjadi kesalahan.' });
