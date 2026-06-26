@@ -1,6 +1,6 @@
 {
   "name": "resep-keluarga",
-  "version": "3.9.18",
+  "version": "3.9.20",
   "private": true,
   "engines": {
     "node": ">=18"

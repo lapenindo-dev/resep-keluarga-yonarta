@@ -10,7 +10,7 @@ let db;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
 catch(e){ console.error('Supabase init gagal:', e); }
 const PHOTO_BUCKET = 'recipe-photos';
-const APP_VERSION = '3.9.17';
+const APP_VERSION = '3.9.20';
 // v2.1.9: posisi Bantu Isi Resep dipindah di bawah Foto Resep / Tambahan.
 // v2.2.0: Foto Masakan dibuat responsive agar selalu rapi mengikuti lebar device.
 // v2.2.1: Foto Resep / Tambahan dibuat grid responsive di halaman tambah/edit.
@@ -44,6 +44,8 @@ let mealPlan = [];
 let recipeHistory = [];
 let recipeCollections = {};
 let liveCameraStream = null;
+let liveCameraOpening = false;
+let aiLinkExtractInFlight = false;
 let cameraCapturedDataUrls = [];
 let aiPhotoObjectUrls = [];
 const DEFAULT_COLLECTIONS = ['Resep Mama','Resep Oma','Menu Harian','Menu Anak','Hari Raya','Favorit Rumah'];
@@ -91,6 +93,49 @@ window.setRecipeViewMode = setRecipeViewMode;
 // v2.1.3: login utama email/password; Magic Link tetap ada untuk email yang sudah terdaftar
 
 const $ = (id) => document.getElementById(id);
+
+const RK_ICON_PALETTE = ['#174A35','#789B75','#C96A35','#174A35','#789B75','#C96A35'];
+function hydrateRkIcons(root=document){
+  const svgs = [...root.querySelectorAll('svg.rk-icon use, svg.rk-inline-icon use')].map(use => use.closest('svg')).filter(Boolean);
+  svgs.forEach(svg => {
+    const use = svg.querySelector('use');
+    if(!use) return;
+    const href = use.getAttribute('href') || use.getAttribute('xlink:href') || '';
+    const id = href.replace('#','');
+    const symbol = document.getElementById(id);
+    if(!symbol) return;
+    svg.setAttribute('viewBox', symbol.getAttribute('viewBox') || '0 0 24 24');
+    svg.setAttribute('data-rk-icon', id);
+    svg.innerHTML = symbol.innerHTML;
+    svg.querySelectorAll('style').forEach(el => el.remove());
+    const shapes = [...svg.querySelectorAll('path,circle,rect,line,polyline,polygon,ellipse')];
+    shapes.forEach((shape, idx) => {
+      const color = RK_ICON_PALETTE[idx % RK_ICON_PALETTE.length];
+      shape.style.stroke = color;
+      shape.style.fill = 'none';
+      shape.style.strokeWidth = shape.getAttribute('stroke-width') || '1.9';
+      shape.style.strokeLinecap = 'round';
+      shape.style.strokeLinejoin = 'round';
+    });
+    if(svg.closest('.primary, .active, .primary-pill, .camera-live-hero')){
+      // Keep white icon contrast only on dark solid CTA backgrounds.
+      if(svg.closest('.camera-live-hero') || svg.closest('.primary-pill')){
+        shapes.forEach(shape => { shape.style.stroke = '#FFFFFF'; });
+      }
+    }
+  });
+}
+function startRkIconHydration(){
+  hydrateRkIcons(document);
+  const mo = new MutationObserver((mutations) => {
+    let needsHydrate = false;
+    for(const m of mutations){
+      if(m.addedNodes && m.addedNodes.length){ needsHydrate = true; break; }
+    }
+    if(needsHydrate) requestAnimationFrame(() => hydrateRkIcons(document));
+  });
+  mo.observe(document.body, { childList:true, subtree:true });
+}
 const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean);
 const csvArray = (v) => (v || '').split(',').map(x => x.trim()).filter(Boolean);
 const stars = (n) => { const v = Math.max(0, Math.min(Number(n)||0, 5)); return v > 0 ? `Rating keluarga ${v}/5` : 'Belum ada rating'; };
@@ -1587,10 +1632,15 @@ window.shareShoppingListWA = () => {
 function setAiStatus(message, type){
   const el = $('aiExtractStatus');
   if(!el) return;
-  if(!message){ el.style.display = 'none'; return; }
+  if(!message){ el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'block';
   el.className = `ai-status ${type||''}`;
-  el.textContent = message;
+  const safeMessage = escapeHtml(message);
+  if(type === 'loading'){
+    el.innerHTML = `<span class="rk-cooking-loader" aria-hidden="true"><i class="rk-pot"></i><i class="rk-steam rk-steam-a"></i><i class="rk-steam rk-steam-b"></i></span><span>${safeMessage}</span>`;
+  } else {
+    el.textContent = message;
+  }
 }
 
 function clearAiPanel(){
@@ -1687,9 +1737,46 @@ function setCameraPanelState(open){
   if(stopBtn) stopBtn.hidden = !open;
 }
 
+function openCameraPickerFallback(){
+  const cameraInput = $('aiCameraCaptureInput') || $('aiPhotoInput');
+  if(cameraInput){
+    try {
+      cameraInput.disabled = false;
+      cameraInput.click();
+      return true;
+    } catch(e) { return false; }
+  }
+  return false;
+}
+
+function setupCameraCaptureFallback(){
+  const cameraInput = $('aiCameraCaptureInput');
+  if(!cameraInput) return;
+  cameraInput.addEventListener('change', async () => {
+    const file = cameraInput.files?.[0];
+    if(!file) return;
+    try {
+      cameraCapturedDataUrls = [await compressImageFile(file, { maxDimension: 1600, quality: 0.78 })];
+      const gallery = $('aiPhotoInput');
+      if(gallery) gallery.value = '';
+      renderAiPhotoPreview();
+      setAiStatus('Foto kamera siap. Tekan Baca & Rapikan.', 'success');
+    } catch(e){
+      setAiStatus('Foto kamera gagal dibaca. Coba ulangi atau pilih dari galeri.', 'error');
+    }
+  });
+}
+
 async function openLiveCamera(){
-  if(!navigator.mediaDevices?.getUserMedia){
-    setAiStatus('Kamera live tidak tersedia di browser ini. Pakai galeri.', 'error');
+  if(liveCameraOpening) return;
+  liveCameraOpening = true;
+  const openBtn = $('openLiveCameraBtn');
+  if(openBtn){ openBtn.classList.add('rk-working'); openBtn.disabled = true; }
+  if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){
+    const opened = openCameraPickerFallback();
+    setAiStatus(opened ? 'Kamera perangkat dibuka. Ambil foto lalu kembali ke app.' : 'Kamera tidak tersedia di browser ini. Pakai pilihan galeri.', opened ? 'loading' : 'error');
+    liveCameraOpening = false;
+    if(openBtn){ openBtn.classList.remove('rk-working'); openBtn.disabled = false; }
     return;
   }
   try {
@@ -1713,9 +1800,14 @@ async function openLiveCamera(){
     setAiStatus('Arahkan kamera ke resep, lalu ambil foto.', 'loading');
   } catch(err){
     setCameraPanelState(false);
-    setAiStatus('Izin kamera ditolak atau tidak tersedia. Pakai pilihan galeri.', 'error');
+    const opened = openCameraPickerFallback();
+    setAiStatus(opened ? 'Kamera perangkat dibuka. Ambil foto lalu kembali ke app.' : 'Izin kamera ditolak atau tidak tersedia. Pakai pilihan galeri.', opened ? 'loading' : 'error');
+  } finally {
+    liveCameraOpening = false;
+    if(openBtn){ openBtn.classList.remove('rk-working'); openBtn.disabled = false; }
   }
 }
+window.openLiveCamera = openLiveCamera;
 
 function stopLiveCamera(clearStatus = true){
   if(liveCameraStream){
@@ -1755,13 +1847,23 @@ function setupLiveCameraCapture(){
 }
 
 async function callExtractRecipeApi(payload){
-  const resp = await fetch('/api/extract-recipe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const data = await resp.json();
-  if(!resp.ok) throw new Error(data.error || 'Gagal mengekstrak resep.');
+  let resp;
+  try {
+    resp = await fetch('/api/extract-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch(e){
+    throw new Error('Koneksi ke AI belum tersambung. Pastikan app dibuka dari hosting HTTPS, bukan file lokal.');
+  }
+  const raw = await resp.text();
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch(e){
+    throw new Error(resp.ok ? 'Respons AI tidak valid.' : `Endpoint AI tidak merespons benar (${resp.status}).`);
+  }
+  if(!resp.ok) throw new Error(data.error || `Gagal mengekstrak resep (${resp.status}).`);
+  if(!data.recipe) throw new Error('AI belum mengembalikan data resep.');
   return data.recipe;
 }
 
@@ -1789,10 +1891,11 @@ function applyExtractedRecipe(recipe, sourceLabel){
 }
 
 async function handleAiExtractPhoto(){
+  const btn = $('aiExtractPhotoBtn'); if(btn){btn.classList.add('rk-working'); btn.disabled = true;}
   const files = Array.from($('aiPhotoInput').files || []);
   const captured = [...cameraCapturedDataUrls];
   const totalCount = files.length + captured.length;
-  if(!totalCount) return setAiStatus('Ambil foto kamera atau pilih dari galeri dulu.', 'error');
+  if(!totalCount){ if(btn){btn.classList.remove('rk-working'); btn.disabled=false;} return setAiStatus('Ambil foto kamera atau pilih dari galeri dulu.', 'error'); }
   setAiStatus(files.length ? `Mengompres ${files.length} foto...` : 'Menyiapkan foto kamera...', 'loading');
   try {
     const uploadedImages = files.length ? await Promise.all(files.map(f => compressImageFile(f))) : [];
@@ -1803,33 +1906,38 @@ async function handleAiExtractPhoto(){
     applyExtractedRecipe(recipe, source);
   } catch(err){
     setAiStatus(err.message, 'error');
-  }
+  } finally { if(btn){btn.classList.remove('rk-working'); btn.disabled=false;} }
 }
 
 async function handleAiExtractText(){
+  const btn = $('aiExtractTextBtn'); if(btn){btn.classList.add('rk-working'); btn.disabled=true;}
   const text = $('aiTextInput').value.trim();
   const source = $('aiTextSource')?.value || 'Internet';
-  if(!text) return setAiStatus('Tulis atau paste teks dulu.', 'error');
+  if(!text){ if(btn){btn.classList.remove('rk-working'); btn.disabled=false;} return setAiStatus('Tulis atau paste teks dulu.', 'error'); }
   setAiStatus('Merapikan teks...', 'loading');
   try {
     const recipe = await callExtractRecipeApi({ mode: 'text', rawText: text });
     applyExtractedRecipe(recipe, source);
   } catch(err){
     setAiStatus(err.message, 'error');
-  }
+  } finally { if(btn){btn.classList.remove('rk-working'); btn.disabled=false;} }
 }
 
 async function handleAiExtractLink(){
+  if(aiLinkExtractInFlight) return;
+  aiLinkExtractInFlight = true;
+  const btn = $('aiExtractLinkBtn');
+  if(btn) { btn.classList.add('rk-working'); btn.disabled = true; }
   const url = ($('aiLinkInput')?.value || '').trim();
   const source = $('aiLinkSource')?.value || 'Internet';
-  if(!url) return setAiStatus('Tempel link resep dulu.', 'error');
+  if(!url){ aiLinkExtractInFlight=false; if(btn){btn.classList.remove('rk-working'); btn.disabled=false;} return setAiStatus('Tempel link resep dulu.', 'error'); }
   let normalizedUrl = '';
   try {
     const u = new URL(url);
     if(!['http:', 'https:'].includes(u.protocol)) throw new Error('invalid');
     normalizedUrl = u.href;
   } catch(e){
-    return setAiStatus('Format link belum valid. Gunakan link lengkap mulai dari https://', 'error');
+    aiLinkExtractInFlight=false; if(btn){btn.classList.remove('rk-working'); btn.disabled=false;} return setAiStatus('Format link belum valid. Gunakan link lengkap mulai dari https://', 'error');
   }
   if($('link_sumber')) $('link_sumber').value = normalizedUrl;
   if($('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(source || 'Internet');
@@ -1840,8 +1948,12 @@ async function handleAiExtractLink(){
     applyExtractedRecipe(recipe, source || 'Internet');
   } catch(err){
     setAiStatus(err.message || 'Gagal mengambil resep dari link.', 'error');
+  } finally {
+    aiLinkExtractInFlight = false;
+    if(btn){ btn.classList.remove('rk-working'); btn.disabled = false; }
   }
 }
+window.handleAiExtractLink = handleAiExtractLink;
 
 function enforceLightMode(){
   document.documentElement.style.colorScheme = 'only light';
@@ -2421,6 +2533,7 @@ function initHeritagePressFeedback(){
 /* ========== INIT — all event handlers ========== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  startRkIconHydration();
   enforceLightMode();
   initHeritagePressFeedback();
   loadAppSettings();
@@ -2600,6 +2713,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // AI Recipe Extraction
   setupAiTabs();
   setupLiveCameraCapture();
+  setupCameraCaptureFallback();
   $('aiExtractPhotoBtn')?.addEventListener('click', handleAiExtractPhoto);
   $('aiExtractTextBtn')?.addEventListener('click', handleAiExtractText);
   $('aiExtractLinkBtn')?.addEventListener('click', handleAiExtractLink);
@@ -2621,5 +2735,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('Resep Keluarga v3.9.18 web link import loaded');
+  console.log('Resep Keluarga v3.9.20 commercial QA fix loaded');
 });
