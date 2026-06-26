@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Resep Keluarga v3.4.0</title>
-  <meta name="theme-color" content="#F8F4EE" />
+  <title>Resep Keluarga v3.9.8</title>
+  <meta name="theme-color" content="#FAFAF9" />
   <meta name="description" content="Buku resep keluarga digital untuk menyimpan resep Mama, Oma, dan keluarga agar tidak hilang dan bisa diwariskan ke anak cucu." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -13,75 +13,122 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style-v340.css?v=3.4.0-clean-competitor" />
-  <style id="rk-v340-critical">
-    html{color-scheme:light !important;background:#F7F3EC !important;}
-    body{background:#F7F3EC !important;color:#1B1B1D !important;overflow-x:hidden !important;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;}
-    *{box-sizing:border-box;}
-    .topbar{background:rgba(247,243,236,.92) !important;color:#1B1B1D !important;border-bottom:1px solid rgba(27,27,29,.08) !important;box-shadow:none !important;}
-    .home-hero,.v31-hero{background:#FFFFFF !important;color:#1B1B1D !important;border:0 !important;box-shadow:0 18px 48px rgba(37,34,30,.10) !important;}
-    .home-hero h2,.v31-hero h2{color:#1B1B1D !important;text-shadow:none !important;}
-    .metric-pill,.quick-action-card,.card,.item,.tool-card,.recipe-card,.v31-recipe-card{background:#FFFFFF !important;color:#1B1B1D !important;}
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=3.9.8-full-icon-audit" />
+  <style id="rk-v390-critical">
+    html{color-scheme:light!important;background:#FAFAF9!important}body{background:#FAFAF9!important;color:#111827!important}*{box-sizing:border-box}
   </style>
 </head>
 <body class="auth-locked">
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M5 10.5c0-3.3 2.7-6 6-6h2c3.3 0 6 2.7 6 6V20H5Z"/><path d="M8 20v-6.8c0-1.8 1.5-3.2 3.2-3.2h1.6c1.8 0 3.2 1.5 3.2 3.2V20"/><path d="M9 5.3V3.8h6v1.5"/><path d="M10 14h4"/><path d="M12 10v8"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.2 12 5l8 6.2"/><path d="M6 10.8V20h12v-9.2"/><path d="M9 20v-5.2c0-1.2 1-2.2 2.2-2.2h1.6c1.2 0 2.2 1 2.2 2.2V20"/><path d="M8.6 8.3c1.2.6 2.1.8 3.4.8s2.2-.2 3.4-.8"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5.5 4.5h10.2A2.8 2.8 0 0 1 18.5 7.3v12.2H8.2a2.7 2.7 0 0 1-2.7-2.7Z"/><path d="M8 4.5a2.5 2.5 0 0 0-2.5 2.5v9.8"/><path d="M9 8.3h6"/><path d="M9 11.7h5"/><path d="M9 15.1h3.5"/><path d="M16 4.5v15"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.5v13"/><path d="M5.5 12h13"/><path d="M7.5 7.5h9v9h-9Z" opacity=".28"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M7.5 4v3"/><path d="M16.5 4v3"/><path d="M5 8.5h14"/><rect x="4.5" y="5.5" width="15" height="15" rx="3"/><path d="M8 12.2h2.5"/><path d="M8 15.6h5"/><path d="M15.5 12.2h.1"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 4.5 20 9l-8 4.5L4 9Z"/><path d="M5.5 12.4 12 16l6.5-3.6"/><path d="M5.5 16 12 19.5 18.5 16"/><path d="M10 8.7h4"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M8 7.2 9.5 5h5L16 7.2h3a2 2 0 0 1 2 2v8.3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.2a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.4"/><path d="M5.7 10h2"/><path d="m15.2 14.8 2.6 2.6"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M6 4.8h12a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H10l-4 3v-3.2a2 2 0 0 1-2-2V6.8a2 2 0 0 1 2-2Z"/><path d="M8 8.5h8"/><path d="M8 11.5h7"/><path d="M8 14.5h4"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.8 19.2 6 14l8.9-8.9a2.1 2.1 0 0 1 3 0l1 1a2.1 2.1 0 0 1 0 3L10 18Z"/><path d="m13.8 6.2 4 4"/><path d="M5 20h14"/><path d="M7.8 15.8l2.4 2.4"/></symbol>
+    <symbol id="i-hub" viewBox="0 0 24 24"><path d="M12 4.2c-3.8 0-7 2.8-7 6.4 0 5.2 7 9.2 7 9.2s7-4 7-9.2c0-3.6-3.2-6.4-7-6.4Z"/><path d="M8.8 12.2 12 9l3.2 3.2"/><path d="M10 11.2v4h4v-4"/><path d="M12 15.2v-2"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="7" cy="12" r="2.2"/><circle cx="17" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/><path d="m9 11 6-3"/><path d="m9 13 6 3"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 11a7.5 7.5 0 0 0-12.8-4.8L5 8"/><path d="M5 4.5V8h3.5"/><path d="M4.5 13a7.5 7.5 0 0 0 12.8 4.8L19 16"/><path d="M19 19.5V16h-3.5"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10.5 5.5H6.8a2.3 2.3 0 0 0-2.3 2.3v8.4a2.3 2.3 0 0 0 2.3 2.3h3.7"/><path d="M15 8.2 18.8 12 15 15.8"/><path d="M18.8 12H9"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m7 7 10 10"/><path d="m17 7-10 10"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.8-3.7 3.2-5.5 6.5-5.5s5.7 1.8 6.5 5.5"/><path d="M17.8 11.5c1.4.2 2.5 1 3.2 2.2"/><path d="M6.2 11.5c-1.4.2-2.5 1-3.2 2.2"/></symbol>
+    <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M7.5 4.5h9A2.5 2.5 0 0 1 19 7v12.5H8a3 3 0 0 1-3-3V7a2.5 2.5 0 0 1 2.5-2.5Z"/><path d="M8 19.5a2.5 2.5 0 0 1 0-5h9"/><path d="M9 8.3h5.5"/><path d="M9 11.5h4"/><path d="M15.8 4.8v9.7"/></symbol>
+    <symbol id="i-gallery" viewBox="0 0 24 24"><rect x="4.5" y="5" width="15" height="14" rx="2.5"/><circle cx="9" cy="9.2" r="1.3"/><path d="m6.5 17 4.2-4.2 2.8 2.8 2.4-2.4 2.6 3.8"/><path d="M8 3.5h8"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M4.5 5.5h2l1.7 9.5h8.7l2.2-6.8H7.3"/><path d="M9 18.5h.01"/><path d="M17 18.5h.01"/><path d="M10 11.5h5"/><path d="M12.5 9v5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.8 19 6.6v5.1c0 4-2.4 6.9-7 8.8-4.6-1.9-7-4.8-7-8.8V6.6Z"/><path d="m8.6 12 2.1 2.1 4.7-5"/><path d="M12 5.8v13"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5-2-5.5-5.5-2L10 9Z"/><path d="M18.2 15.4 19 18l2.5.8-2.5.9-.8 2.3-.9-2.3-2.3-.9 2.3-.8Z"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.2a2.5 2.5 0 0 1 4.8 1c0 1.7-2.5 2-2.5 3.8"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.6a5.6 5.6 0 0 0-.7-1.6l1-1.8-2.1-2.1-1.8 1a5.6 5.6 0 0 0-1.6-.7l-.6-2h-3l-.6 2a5.6 5.6 0 0 0-1.6.7l-1.8-1-2.1 2.1 1 1.8a5.6 5.6 0 0 0-.7 1.6l-2 .6v3l2 .6c.2.6.4 1.1.7 1.6l-1 1.8 2.1 2.1 1.8-1c.5.3 1 .5 1.6.7l.6 2h3l.6-2c.6-.2 1.1-.4 1.6-.7l1.8 1 2.1-2.1-1-1.8c.3-.5.5-1 .7-1.6Z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/><path d="M12 14v2.5"/></symbol>
+    <symbol id="i-install" viewBox="0 0 24 24"><rect x="6" y="3.5" width="12" height="17" rx="2.5"/><path d="M12 7v7"/><path d="m9.5 11.5 2.5 2.5 2.5-2.5"/><path d="M10 18h4"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="10" height="12" rx="2"/><path d="M6 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7l1 13h8l1-13"/><path d="M10.5 11v5"/><path d="M13.5 11v5"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 8V4.5h10V8"/><path d="M7 17.5H5.5A2.5 2.5 0 0 1 3 15v-4a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 11v4a2.5 2.5 0 0 1-2.5 2.5H17"/><path d="M7 14h10v6H7Z"/><path d="M17.5 12h.01"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/><path d="M9 12h8"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 4.6 2.2 4.4 4.8.7-3.5 3.4.8 4.8L12 15.5 7.7 18l.8-4.8L5 9.7l4.8-.7Z"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 19s-6.8-4.1-6.8-9.1A4 4 0 0 1 12 7a4 4 0 0 1 6.8 2.9C18.8 14.9 12 19 12 19Z"/></symbol>
+    <symbol id="i-dice" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 3.8 6.8 13h4.3l-1 7.2 6.7-9.2h-4.4l1.1-7.2Z"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M16 10V7.8a4 4 0 0 0-7.6-1.7"/><path d="M12 14v2.5"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M6 8h11l-2.5-2.5"/><path d="M17 8l-2.5-2.5"/><path d="M18 16H7l2.5 2.5"/><path d="M7 16l2.5 2.5"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M6 5h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6l-4 3v-3H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><path d="M8.5 9.5h7"/><path d="M8.5 12.5h5"/></symbol>
+    <symbol id="i-spice" viewBox="0 0 24 24"><path d="M9 5.5h6v3H9Z"/><path d="M8 8.5h8v10A1.5 1.5 0 0 1 14.5 20h-5A1.5 1.5 0 0 1 8 18.5Z"/><path d="M10.2 12.2c.8-.8 2.6-.8 3.4 0"/><path d="M12 8.5V6"/></symbol>
+    <symbol id="i-meat" viewBox="0 0 24 24"><path d="M9.2 7.2c1.8-1.8 4.8-2 6.7-.3 1.4 1.2 2.1 3.2 1.7 5.1-.4 1.8-1.5 3.6-3.2 5.2-1.7 1.7-3.4 2.8-5.2 3.2-1.9.4-3.9-.3-5.1-1.7-1.7-1.9-1.5-4.9.3-6.7 1.1-1.1 2.7-1.6 4.2-1.2.1-1.4.6-2.7 1.6-3.6Z"/><circle cx="8.6" cy="15.4" r="1.1"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M18.5 5.5c-6 .3-10.4 2.6-12.3 7-1 2.3-.8 4.6.5 6 1.4 1.5 3.8 1.7 6 .7 4.4-1.9 6.7-6.3 7-12.3Z"/><path d="M8 16c2-2.1 4.4-3.8 7.4-5.2"/></symbol>
+    <symbol id="i-grain" viewBox="0 0 24 24"><path d="M12 4.5c1.8 1.9 2.7 4 2.7 6.2 0 3.1-1.8 5.9-2.7 8.8-.9-2.9-2.7-5.7-2.7-8.8 0-2.2.9-4.3 2.7-6.2Z"/><path d="M8 10.5c1.2.9 2.5 1.4 4 1.4s2.8-.5 4-1.4"/></symbol>
+    <symbol id="i-fruit" viewBox="0 0 24 24"><path d="M12 7c4.1 0 6.8 2.7 6.8 6.2S16.1 20 12 20s-6.8-2.4-6.8-6.8S7.9 7 12 7Z"/><path d="M12 7c.1-1.8 1.3-3.2 3-3.8"/><path d="M11 5c-.8-.8-1.8-1.2-3-1.2"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 4.8 19 8.5v7L12 19.2 5 15.5v-7Z"/><path d="M12 19.2v-7"/><path d="M5 8.5l7 3.7 7-3.7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m6.5 12.5 3.4 3.4 7.6-7.6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.8 20 19H4Z"/><path d="M12 9v4.5"/><path d="M12 16.8h.01"/></symbol>
+    <symbol id="i-time" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3.2 1.8"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  </svg>
+
   <div id="drawerBackdrop" class="drawer-backdrop" aria-hidden="true"></div>
   <aside id="familyHubDrawer" class="family-hub-drawer" aria-hidden="true">
     <div class="hub-header">
-      <div class="hub-avatar">🏡</div>
+      <div class="hub-avatar"><svg class="rk-icon"><use href="#i-hub"></use></svg></div>
       <div>
         <p class="eyebrow">Family Hub</p>
         <h2>Rumah Resep Keluarga</h2>
-        <p id="hubUserMini" class="muted">Resep, cerita, backup, dan keluarga.</p>
+        <p id="hubUserMini" class="muted">Tempat resep keluarga tetap hidup, aman, dan bisa diwariskan.</p>
       </div>
-      <button id="closeHubBtn" class="icon-btn" type="button" title="Tutup Family Hub">×</button>
+      <button id="closeHubBtn" class="icon-btn" type="button" title="Tutup Family Hub"><svg class="rk-icon"><use href="#i-close"></use></svg></button>
     </div>
-    <div class="hub-trust-card">
-      <b>Simpan · Rapikan · Bagikan · Wariskan</b>
-      <span>Family Recipe Heritage App v3.4.0</span>
+    <div class="hub-trust-card hub-depth-card">
+      <b>Resep keluarga tetap hidup.</b>
+      <span>Simpan asal, cerita, foto, dan backup dalam satu rumah digital.</span>
+      <div class="hub-depth-grid" aria-label="Status arsip keluarga">
+        <span><b id="hubRecipeCount">0</b><small>resep</small></span>
+        <span><b id="hubSyncState">Akun</b><small>terpisah</small></span>
+        <span><b id="hubBackupState">Backup</b><small>tersedia</small></span>
+      </div>
     </div>
     <nav class="hub-nav" aria-label="Family Hub">
-      <p class="hub-section-label">Keluarga & Warisan</p>
-      <button data-go="family" type="button">👨‍👩‍👧‍👦<span><b>Family Profile</b><small>Identitas dan ruang keluarga</small></span></button>
-      <button data-go="heritage" type="button">📜<span><b>Warisan</b><small>Resep yang ingin dijaga lintas generasi</small></span></button>
-      <button data-go="gallery" type="button">🖼️<span><b>Gallery</b><small>Foto masakan dan catatan lama</small></span></button>
-      <p class="hub-section-label">Operasional</p>
-      <button data-go="shopping" type="button">🛒<span><b>Shopping List</b><small>Daftar belanja dari rencana masak</small></span></button>
-      <button data-go="collections" type="button">📚<span><b>Koleksi</b><small>Folder resep keluarga</small></span></button>
-      <button data-go="master" type="button">🧂<span><b>Master Bahan</b><small>Bahan dan satuan standar</small></span></button>
-      <p class="hub-section-label">Trust & Bantuan</p>
-      <button data-go="backup" type="button">💾<span><b>Backup</b><small>Export data per akun</small></span></button>
-      <button data-go="sharing" type="button">🔐<span><b>Sharing</b><small>Kontrol berbagi keluarga</small></span></button>
-      <button data-go="assistant" type="button">✨<span><b>AI Assistant</b><small>Bantu rapikan, bukan menggantikan</small></span></button>
-      <button data-go="help" type="button">❔<span><b>Bantuan</b><small>Panduan singkat penggunaan</small></span></button>
-      <button data-go="privacy" type="button">🛡️<span><b>Privacy Policy</b><small>Data resep tetap milik akun Anda</small></span></button>
-      <button data-go="settings" type="button">⚙️<span><b>Settings</b><small>Akun, logout, dan preferensi</small></span></button>
+      <p class="hub-section-label">Family</p>
+      <button data-go="family" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-user"></use></svg><span><b>Family Profile</b><small>Identitas dan akun keluarga</small></span></button>
+      <button data-go="sharing" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-share"></use></svg><span><b>Sharing</b><small>Bagikan resep dengan kendali</small></span></button>
+      <p class="hub-section-label">Memories</p>
+      <button data-go="heritage" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-scroll"></use></svg><span><b>Warisan</b><small>Resep yang dijaga lintas generasi</small></span></button>
+      <button data-go="gallery" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-gallery"></use></svg><span><b>Gallery</b><small>Foto masakan dan catatan lama</small></span></button>
+      <p class="hub-section-label">Planning</p>
+      <button data-go="shopping" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-cart"></use></svg><span><b>Shopping List</b><small>Daftar belanja dari rencana masak</small></span></button>
+      <button data-go="assistant" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-spark"></use></svg><span><b>AI Assistant</b><small>Merapikan resep, bukan memutuskan</small></span></button>
+      <p class="hub-section-label">Data & Safety</p>
+      <button data-go="backup" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-shield"></use></svg><span><b>Backup</b><small>Export data dan restore per akun</small></span></button>
+      <button data-go="settings" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-settings"></use></svg><span><b>Settings</b><small>Akun, logout, dan preferensi</small></span></button>
+      <p class="hub-section-label">Support</p>
+      <button data-go="help" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-help"></use></svg><span><b>Bantuan</b><small>Panduan singkat penggunaan</small></span></button>
+      <button data-go="privacy" type="button"><svg class="rk-icon hub-nav-icon"><use href="#i-shield"></use></svg><span><b>Privasi</b><small>Data resep tetap milik akun Anda</small></span></button>
     </nav>
   </aside>
 
   <div id="authScreen" class="auth-screen">
     <div class="auth-card">
-      <div class="auth-logo">🍳</div>
+      <div class="auth-logo"><svg class="rk-icon"><use href="#i-logo"></use></svg></div>
       <p class="eyebrow">Family Recipe Heritage App</p>
       <h2>Simpan resep Mama hari ini, sebelum hanya tersisa kenangan.</h2>
-      <p class="muted">Masuk ke rumah digital keluarga untuk menyimpan, merapikan, membagikan, dan mewariskan resep yang tidak ingin hilang.</p>
+      <p class="muted">Mulai dari satu resep keluarga. Foto, caption, atau tulis manual — simpan dulu, rapikan nanti.</p>
       <label>Email
         <input id="loginEmail" type="email" placeholder="nama@email.com" autocomplete="email" />
       </label>
       <label>Password
-        <input id="loginPassword" type="password" placeholder="Password dapur keluarga" autocomplete="current-password" />
+        <input id="loginPassword" type="password" placeholder="Password akun" autocomplete="current-password" />
       </label>
       <button id="loginPasswordBtn" class="primary wide" type="button">Masuk</button>
       <button id="loginBtn" class="secondary wide" type="button">Kirim Magic Link</button>
-      <p class="trust-copy">🔐 Data resep dipisahkan per akun. Gunakan email keluarga masing-masing.</p>
+      <p class="trust-copy"><svg class="rk-inline-icon"><use href="#i-lock"></use></svg> Data resep dipisahkan per akun. Gunakan email keluarga masing-masing.</p>
       <div id="authStatus" class="ai-status" style="display:none"></div>
-      <p class="hint">Gunakan akun yang sudah terdaftar. Magic Link hanya berfungsi bila email diizinkan di Supabase Auth.</p>
+      <p class="hint">Resep tetap milik akun Anda dan bisa diekspor kapan saja.</p>
     </div>
   </div>
   <!-- Install banner -->
   <div id="installBanner" class="install-banner" style="display:none">
-    <span>📲 Install sebagai app?</span>
+    <span><svg class="rk-inline-icon"><use href="#i-install"></use></svg> Install sebagai app?</span>
     <div>
       <button id="installBtn" class="primary small">Install</button>
       <button id="installDismiss" class="ghost small">Nanti</button>
@@ -90,66 +137,78 @@
 
   <header class="topbar">
     <div class="topbar-left">
-      <button id="openHubBtn" class="hub-open-btn" type="button" title="Buka Family Hub" onclick="openFamilyHub()"><span>🏡</span></button>
-      <button id="backBtn" class="icon-btn" title="Kembali" style="display:none">←</button>
+      <button id="openHubBtn" class="hub-open-btn" type="button" title="Buka Family Hub" onclick="openFamilyHub()"><svg class="rk-icon"><use href="#i-hub"></use></svg></button>
+      <button id="backBtn" class="icon-btn" title="Kembali" style="display:none"><svg class="rk-icon"><use href="#i-back"></use></svg></button>
       <div>
-        <p class="eyebrow">Family Recipe Heritage App</p>
-        <h1>Resep Keluarga</h1>
+        <p class="eyebrow">Family Kitchen</p>
+        <h1>Resep</h1>
       </div>
     </div>
     <div class="topbar-actions">
-      <button id="shareAppBtn" class="icon-btn" title="Share aplikasi">↗</button>
-      <button id="refreshBtn" class="icon-btn" title="Refresh data">⟳</button>
-      <button id="logoutBtn" class="icon-btn" title="Logout">⎋</button>
+      <button id="shareAppBtn" class="icon-btn" title="Share aplikasi"><svg class="rk-icon"><use href="#i-share"></use></svg></button>
+      <button id="refreshBtn" class="icon-btn" title="Refresh data"><svg class="rk-icon"><use href="#i-refresh"></use></svg></button>
+      <button id="logoutBtn" class="icon-btn" title="Logout"><svg class="rk-icon"><use href="#i-logout"></use></svg></button>
     </div>
   </header>
 
   <main>
-    <section id="home" class="page active">
-      <div class="home-hero v31-hero">
-        <div class="hero-copy">
-          <span class="hero-kicker">Family Recipe Heritage App</span>
-          <h2>Simpan resep keluarga sebelum hilang.</h2>
-          <p>Ambil dari foto kertas, screenshot chat, caption, atau tulis manual. AI bantu rapikan, keluarga tetap memutuskan.</p>
+    <section id="home" class="page active home-screen">
+      <div class="home-greeting-card">
+        <div>
+          <p class="eyebrow">Hari ini</p>
+          <h2>Resep keluarga tetap hidup.</h2>
+          <p class="muted">Simpan resep Mama, Oma, dan catatan rumah sebelum hilang.</p>
         </div>
-        <div class="hero-actions">
-          <button class="primary wide" data-go="add">+ Simpan Resep</button>
-          <button class="secondary wide" data-go="recipes">Cari Resep</button>
-        </div>
+        <button class="primary compact-cta" data-go="add">+ Tambah</button>
       </div>
 
-      <div class="v31-metric-strip">
+      <div class="quick-action-row" aria-label="Aksi cepat">
+        <button class="quick-action-pill primary-pill" data-go="add" type="button"><span><svg class="rk-icon"><use href="#i-camera"></use></svg></span><b>Scan</b></button>
+        <button class="quick-action-pill" data-go="add" type="button"><span><svg class="rk-icon"><use href="#i-text"></use></svg></span><b>Caption</b></button>
+        <button class="quick-action-pill" data-go="add" type="button"><span><svg class="rk-icon"><use href="#i-edit"></use></svg></span><b>Manual</b></button>
+        <button class="quick-action-pill" onclick="openFamilyHub()" type="button"><span><svg class="rk-icon"><use href="#i-hub"></use></svg></span><b>Hub</b></button>
+      </div>
+
+      <div id="firstRecipeGuide" class="first-recipe-guide" style="display:none">
+        <div>
+          <b>Mulai dari resep yang paling berarti.</b>
+          <span>Foto catatan Mama, paste chat keluarga, atau tulis ulang dari ingatan.</span>
+        </div>
+        <button class="primary small" data-go="add" type="button">Simpan Resep</button>
+      </div>
+
+      <div class="home-stats-row">
         <button class="metric-pill" type="button" data-go="recipes"><b id="totalResep">0</b><span>Resep</span></button>
         <button class="metric-pill" type="button" onclick="openDashboardMetric('rating5')"><b id="totalFavorit">0</b><span>Favorit</span></button>
-        <button class="metric-pill" type="button" data-go="collections"><b id="dashSumberTerbanyak">-</b><span>Asal utama</span></button>
+        <button class="metric-pill" type="button" data-go="collections"><b id="dashSumberTerbanyak">-</b><span>Asal</span></button>
       </div>
 
-      <div class="v31-quick-grid">
-        <button class="quick-action-card primary-card" data-go="add" type="button"><span>📷</span><b>Foto / Caption</b><small>Mulai dari kertas, chat, atau screenshot.</small></button>
-        <button class="quick-action-card" data-go="collections" type="button"><span>📚</span><b>Koleksi</b><small>Resep Mama, Oma, Hari Raya.</small></button>
-        <button class="quick-action-card" onclick="openFamilyHub()" type="button"><span>🏡</span><b>Family Hub</b><small>Warisan, backup, sharing.</small></button>
-        <button class="quick-action-card" id="randomRecipeBtn" type="button"><span>🎲</span><b>Masak Apa?</b><small>Pilih acak dari resep rumah.</small></button>
-      </div>
-      <div id="randomResult"></div>
-
-      <div class="v31-dashboard-lite" aria-label="Dashboard keluarga">
-        <button class="dashboard-chip" type="button" onclick="openDashboardMetric('rating5')"><b id="dash5star">0</b><span>Rating 5⭐</span></button>
+      <div class="home-insight-strip" aria-label="Ringkasan keluarga">
+        <button class="dashboard-chip" type="button" onclick="openDashboardMetric('rating5')"><b id="dash5star">0</b><span><svg class="rk-inline-icon"><use href="#i-star"></use></svg> Rating tinggi</span></button>
         <button class="dashboard-chip" type="button" onclick="openDashboardMetric('cooked')"><b id="dashTotalCooked">0</b><span>Dimasak</span></button>
         <button class="dashboard-chip" type="button" onclick="openDashboardMetric('jenis')"><b id="dashJenisTerbanyak">-</b><span>Jenis favorit</span></button>
       </div>
-      <div class="stat-block v31-top-cooked">
+
+      <div class="section-header-row">
+        <div>
+          <h2 id="latestTitle">Terbaru</h2>
+          <p class="muted mini-note">Resep terakhir disimpan.</p>
+        </div>
+        <button class="text-link" data-go="recipes" type="button">Lihat semua</button>
+      </div>
+      <div id="latestList" class="list"></div>
+
+      <div class="stat-block v31-top-cooked home-secondary-card">
         <h4>Sering kembali ke meja</h4>
         <div id="topCookedList" class="top-cooked-list"></div>
       </div>
-      <h2 id="latestTitle">Resep Keluarga Tersimpan</h2>
-      <p class="muted mini-note">Setiap resep adalah bagian kecil dari cerita rumah.</p>
-      <div id="latestList" class="list"></div>
+      <div id="randomResult"></div>
     </section>
 
     <section id="recipes" class="page">
       <div class="search-row">
         <input id="searchInput" class="search" placeholder="Cari nama resep, bahan, asal keluarga..." />
-        <button id="voiceSearchBtn" class="mic-btn" type="button" title="Cari dengan suara" style="display:none">🎤</button>
+        <button id="voiceSearchBtn" class="mic-btn" type="button" title="Cari dengan suara" style="display:none"><svg class="rk-inline-icon"><use href="#i-text"></use></svg></button>
       </div>
       <div class="chips">
         <button class="chip active" data-filter="">Semua</button>
@@ -158,173 +217,149 @@
         <button class="chip" data-filter="Sapi">Sapi</button>
         <button class="chip" data-filter="Seafood">Seafood</button>
         <button class="chip" data-filter="Sayur">Sayur</button>
-        <button class="chip" data-filter="Internet">🌐 Internet</button>
-        <button class="chip" data-filter="Warisan">📜 Warisan</button>
-        <button class="chip" data-filter="Keluarga">👨‍👩‍👧‍👦 Keluarga</button>
-        <button class="chip" data-filter="Teman">🤝 Teman</button>
-        <button class="chip" data-filter="Kreasi sendiri">✨ Kreasi sendiri</button>
+        <button class="chip" data-filter="Internet">Internet</button>
+        <button class="chip" data-filter="Warisan">Warisan</button>
+        <button class="chip" data-filter="Keluarga">Keluarga</button>
+        <button class="chip" data-filter="Teman">Teman</button>
+        <button class="chip" data-filter="Kreasi sendiri">Kreasi sendiri</button>
       </div>
       <div class="collection-filter-row">
-        <div class="filter-subtitle">📁 Koleksi Keluarga</div>
+        <div class="filter-subtitle"><svg class="rk-inline-icon"><use href="#i-layers"></use></svg> Koleksi Keluarga</div>
         <div id="collectionFilterChips" class="chips collection-filter-chips"></div>
       </div>
       <div id="recipeList" class="list"></div>
     </section>
 
-    <section id="add" class="page">
-      <div id="formModeBanner" class="page-mode-banner add-mode"><span>Quick Capture</span><small>Foto kertas, screenshot, chat, caption, atau tulis manual.</small></div>
-      <h2 id="formTitle">Tambah Resep</h2>
-      <p class="muted quick-capture-intro">Mulai dari bahan yang sudah ada. AI membantu menyusun bahan dan langkah; Anda tetap bisa mengedit sebelum menyimpan.</p>
+    <section id="add" class="page add-page">
+      <div class="screen-heading">
+        <h2 id="formTitle">Tambah Resep</h2>
+        <p class="muted quick-capture-intro">Simpan dulu. Cerita dan detail bisa dilengkapi nanti.</p>
+      </div>
 
-      <div class="ai-extract-box quick-capture-box">
-        <div class="section-title-row">
-          <h3>📷 Mulai dari Foto / Caption Resep</h3>
+      <div class="capture-methods" aria-label="Pilih cara tambah resep">
+        <button class="capture-method ai-tab active" data-aitab="photo-caption" type="button">
+          <span><svg class="rk-icon"><use href="#i-camera"></use></svg></span><b>Scan Foto</b><small>Dari foto</small>
+        </button>
+        <button class="capture-method ai-tab" data-aitab="caption-text" type="button">
+          <span><svg class="rk-icon"><use href="#i-text"></use></svg></span><b>Caption</b><small>Dari teks</small>
+        </button>
+        <button class="capture-method ai-tab" data-aitab="manual" type="button">
+          <span><svg class="rk-icon"><use href="#i-edit"></use></svg></span><b>Manual</b><small>Tulis sendiri</small>
+        </button>
+      </div>
+
+      <div class="capture-panels">
+        <div class="ai-panel active" data-aipanel="photo-caption">
+          <div class="capture-card">
+            <div class="capture-card-head">
+              <div><h3>Scan Foto</h3><p class="hint">Foto resep kertas, screenshot chat, atau catatan lama.</p></div>
+              <select id="aiPhotoSource" aria-label="Asal resep dari foto">
+                <option value="Keluarga">Keluarga</option>
+                <option value="Warisan">Warisan</option>
+                <option value="Internet">Internet</option>
+                <option value="Teman">Teman</option>
+                <option value="Kreasi sendiri">Kreasi sendiri</option>
+              </select>
+            </div>
+            <input id="aiPhotoInput" type="file" accept="image/*" multiple />
+            <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
+            <button class="primary wide" id="aiExtractPhotoBtn" type="button">Baca & Rapikan</button>
+          </div>
         </div>
-        <div class="ai-tabs input-recipe-tabs">
-          <button class="ai-tab active" data-aitab="photo-caption" type="button">📷 Foto / Caption</button>
-          <button class="ai-tab" data-aitab="manual" type="button">✍️ Input Manual</button>
+
+        <div class="ai-panel" data-aipanel="caption-text">
+          <div class="capture-card">
+            <div class="capture-card-head">
+              <div><h3>Paste Caption</h3><p class="hint">Tempel chat keluarga, caption, atau catatan resep.</p></div>
+              <select id="aiTextSource" aria-label="Asal resep dari teks">
+                <option value="Internet">Internet</option>
+                <option value="Keluarga">Keluarga</option>
+                <option value="Warisan">Warisan</option>
+                <option value="Teman">Teman</option>
+                <option value="Kreasi sendiri">Kreasi sendiri</option>
+              </select>
+            </div>
+            <textarea id="aiTextInput" placeholder="Tempel bahan dan langkah di sini"></textarea>
+            <button class="primary wide" id="aiExtractTextBtn" type="button">Rapikan dari Teks</button>
+          </div>
         </div>
 
         <div class="ai-panel" data-aipanel="manual">
-          <p class="hint">Gunakan manual jika resep sudah Anda ingat dan ingin langsung ditulis pelan-pelan.</p>
-          <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">✍️ Isi Manual di Bawah</button>
-        </div>
-
-        <div class="ai-panel active" data-aipanel="photo-caption">
-          <p class="hint">Paling cepat: upload foto resep dari kertas / screenshot, atau paste caption resep. AI akan merapikan menjadi bahan dan langkah, lalu Anda tetap bisa edit sebelum simpan.</p>
-
-          <div class="input-method-card">
-            <h4>📷 Dari Foto Resep / Kertas Lama</h4>
-            <p class="hint">Upload foto resep dari kertas, buku lama, tulisan tangan, screenshot chat, atau catatan keluarga. Foto otomatis dikompres dulu sebelum dikirim ke AI.</p>
-            <label class="mini-label">Simpan sebagai asal resep
-              <select id="aiPhotoSource">
-                <option value="Keluarga">Keluarga</option>
-                <option value="Warisan">Warisan</option>
-                <option value="Internet">Internet</option>
-                <option value="Teman">Teman</option>
-                <option value="Kreasi sendiri">Kreasi sendiri</option>
-              </select>
-            </label>
-            <input id="aiPhotoInput" type="file" accept="image/*" multiple />
-            <div id="aiPhotoPreview" class="extra-photos-preview responsive-extra-grid"></div>
-            <button class="primary wide" id="aiExtractPhotoBtn" type="button">✨ Baca & Rapikan dari Foto</button>
-          </div>
-
-          <div class="input-method-card">
-            <h4>📝 Dari Caption / Teks</h4>
-            <p class="hint">Paste caption TikTok/Instagram, transcript YouTube yang dicopy manual, chat WhatsApp, atau catatan resep keluarga dari Mama/Oma.</p>
-            <label class="mini-label">Simpan sebagai asal resep
-              <select id="aiTextSource">
-                <option value="Internet">Internet</option>
-                <option value="Keluarga">Keluarga</option>
-                <option value="Warisan">Warisan</option>
-                <option value="Teman">Teman</option>
-                <option value="Kreasi sendiri">Kreasi sendiri</option>
-              </select>
-            </label>
-            <textarea id="aiTextInput" placeholder="Contoh:
-Bahan: 500gr ayam, 3 siung bawang putih, 2 sdm kecap.
-Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
-            <button class="primary wide" id="aiExtractTextBtn" type="button">✨ Rapikan Caption Jadi Resep</button>
+          <div class="capture-card compact-manual-card">
+            <h3>Input Manual</h3>
+            <p class="hint">Tulis inti resep dulu.</p>
+            <button class="secondary wide" type="button" onclick="document.getElementById('nama_resep').focus()">Mulai Tulis Manual</button>
           </div>
         </div>
 
         <div id="aiExtractStatus" class="ai-status" style="display:none"></div>
       </div>
 
-      <h3 class="mini-section-heading">Asal resep</h3>
-      <div class="capture-choice-grid compact-source-grid" id="captureChoiceGrid">
-        <button class="capture-choice active" type="button" data-source-choice="Keluarga">👨‍👩‍👧‍👦<b>Keluarga</b><span>Resep dari rumah, Mama, Papa, Oma, atau saudara.</span></button>
-        <button class="capture-choice" type="button" data-source-choice="Warisan">📜<b>Warisan</b><span>Resep bernilai sentimental untuk dijaga lintas generasi.</span></button>
-        <button class="capture-choice" type="button" data-source-choice="Internet">🌐<b>Internet</b><span>Resep dari website, caption, atau transcript yang dirapikan.</span></button>
-        <button class="capture-choice" type="button" data-source-choice="Teman">🤝<b>Teman</b><span>Resep dari sahabat, tetangga, atau komunitas.</span></button>
-        <button class="capture-choice" type="button" data-source-choice="Kreasi sendiri">✨<b>Kreasi sendiri</b><span>Resep hasil eksperimen keluarga.</span></button>
-      </div>
-      <button id="toggleAdvancedFormBtn" class="secondary wide" type="button">Detail opsional</button>
-
-      <form id="recipeForm">
+      <form id="recipeForm" class="recipe-form-card">
         <input type="hidden" id="recipeId" />
-        <div class="form-top-actions advanced-field">
-          <button class="primary wide top-save-btn" type="submit">Simpan Resep</button>
-          <small class="hint">Tulis seperti menyimpan cerita rumah, bukan hanya langkah masak.</small>
+
+        <div class="essential-form-grid">
+          <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Semur Ayam Mama" /></label>
+          <label>Asal Resep
+            <select id="sumber_resep"><option>Keluarga</option><option>Warisan</option><option>Internet</option><option>Teman</option><option>Kreasi sendiri</option></select>
+          </label>
         </div>
-        <label class="hero-photo-field">Foto Utama <small class="hint">Foto utama untuk kartu resep dan halaman detail. Bisa foto masakan, catatan lama, atau momen keluarga.</small>
+
+        <label class="hero-photo-field">Foto Utama
           <input id="foto_file" type="file" accept="image/*" />
           <img id="foto_preview" class="photo-preview" alt="Preview" style="display:none" />
         </label>
-        <label class="extra-photo-field advanced-field">Foto Tambahan <small class="hint">Boleh pilih foto catatan resep, tulisan tangan Mama/Oma, bahan, proses masak, atau foto kenangan.</small>
-          <input id="foto_files_extra" type="file" accept="image/*" multiple />
-          <div id="extraPhotosPreview" class="extra-photos-preview responsive-extra-grid"></div>
-        </label>
-        <label>Nama Resep<input id="nama_resep" required placeholder="Contoh: Ayam Kecap Mama" /></label>
-        <label class="advanced-field">Resep dari Siapa <small class="hint">Contoh: Mama, Papa, Oma, Nenek, atau nama anggota keluarga.</small>
-          <input id="penulis_nama" placeholder="Contoh: Mama" />
-        </label>
-        <label class="advanced-field">Bahan Utama
-          <select id="bahan_utama">
-            <option value="">Pilih bahan utama</option>
-            <option>Babi</option><option>Ayam</option><option>Sapi</option><option>Seafood</option>
-            <option>Sayur</option><option>Telur</option><option>Tahu dan Tempe</option><option>Lainnya</option>
-          </select>
-        </label>
-        <label class="advanced-field">Jenis Hidangan
-          <select id="jenis_hidangan">
-            <option value="">Pilih jenis hidangan</option>
-            <option>Nasi</option><option>Mie</option><option>Sup dan Kuah</option><option>Goreng</option>
-            <option>Panggang</option><option>Tumis</option><option>Cemilan</option><option>Dessert</option>
-            <option>Saus dan Bumbu</option><option>Minuman</option><option>Lainnya</option>
-          </select>
-        </label>
-        <label class="advanced-field">Siapa yang Biasanya Masak <small class="hint">Nama anggota keluarga yang paling sering membuat resep ini</small>
-          <input id="dimasak_oleh" list="cookNameOptions" placeholder="Contoh: Mama, Papa, Oma" />
-          <datalist id="cookNameOptions"></datalist>
-        </label>
-        <label class="advanced-field">Durasi Masak<input id="durasi_menit" type="number" placeholder="45" /></label>
-        <label class="advanced-field">Porsi<input id="porsi" type="number" placeholder="4" /></label>
-        <label class="advanced-field">Status Kenangan
-          <select id="status">
-            <option>Belum Dicoba</option><option>Sudah Dicoba</option>
-            <option>Favorit Keluarga</option><option>Resep Andalan</option>
-          </select>
-        </label>
-        <label class="advanced-field">Rating Keluarga <small class="hint">maksimal 5 bintang</small>
-          <select id="rating_keluarga">
-            <option value="0">Belum diberi rating</option>
-            <option value="1">⭐ 1</option><option value="2">⭐⭐ 2</option>
-            <option value="3">⭐⭐⭐ 3</option><option value="4">⭐⭐⭐⭐ 4</option>
-            <option value="5">⭐⭐⭐⭐⭐ 5</option>
-          </select>
-        </label>
+
         <div class="ingredients-editor">
           <div class="section-title-row">
-            <h3>🧂 Bahan Resep</h3>
+            <h3>Bahan</h3>
             <button class="secondary small" type="button" id="addIngredientGroup">+ Grup</button>
           </div>
-          <p class="hint">Isi bahan per grup supaya resep rapi dan daftar belanja bisa dihitung otomatis.</p>
           <datalist id="ingredientOptions"></datalist>
           <div id="ingredientGroups"></div>
         </div>
-        <label>Cara Memasak<textarea id="cara_memasak" placeholder="Tulis 1 langkah per baris. Contoh: Tumis bawang sampai harum seperti cara Mama."></textarea></label>
-        <label class="advanced-field source-select-field">Asal Resep
-          <select id="sumber_resep"><option>Keluarga</option><option>Warisan</option><option>Internet</option><option>Teman</option><option>Kreasi sendiri</option></select>
-        </label>
-        <label class="advanced-field">Label Kenangan<input id="tag" placeholder="Resep Mama, Menu Minggu, Favorit Anak, Lebaran" /></label>
-        <label class="advanced-field">Cerita di Balik Resep<textarea id="catatan_yonarta" placeholder="Ceritakan kenangan di balik resep ini. Siapa yang pertama membuatnya? Biasanya dimasak saat apa? Apa yang membuat resep ini terasa seperti rumah?"></textarea></label>
-        <label class="advanced-field">Link Sumber<input id="link_sumber" placeholder="Website / sosial media / sumber lain, jika ada" /></label>
+
+        <label>Cara Memasak<textarea id="cara_memasak" placeholder="Satu langkah per baris"></textarea></label>
+
+        <button id="toggleAdvancedFormBtn" class="secondary wide" type="button">Detail Tambahan</button>
+
+        <div class="advanced-fields-panel">
+          <label class="extra-photo-field advanced-field">Foto Tambahan
+            <input id="foto_files_extra" type="file" accept="image/*" multiple />
+            <div id="extraPhotosPreview" class="extra-photos-preview responsive-extra-grid"></div>
+          </label>
+          <label class="advanced-field">Resep dari Siapa<input id="penulis_nama" placeholder="Contoh: Mama" /></label>
+          <label class="advanced-field">Bahan Utama
+            <select id="bahan_utama"><option value="">Pilih bahan utama</option><option>Babi</option><option>Ayam</option><option>Sapi</option><option>Seafood</option><option>Sayur</option><option>Telur</option><option>Tahu dan Tempe</option><option>Lainnya</option></select>
+          </label>
+          <label class="advanced-field">Jenis Hidangan
+            <select id="jenis_hidangan"><option value="">Pilih jenis hidangan</option><option>Nasi</option><option>Mie</option><option>Sup dan Kuah</option><option>Goreng</option><option>Panggang</option><option>Tumis</option><option>Cemilan</option><option>Dessert</option><option>Saus dan Bumbu</option><option>Minuman</option><option>Lainnya</option></select>
+          </label>
+          <label class="advanced-field">Biasanya Dimasak Oleh<input id="dimasak_oleh" list="cookNameOptions" placeholder="Contoh: Mama, Papa, Oma" /><datalist id="cookNameOptions"></datalist></label>
+          <div class="advanced-two-col">
+            <label class="advanced-field">Durasi Masak<input id="durasi_menit" type="number" placeholder="45" /></label>
+            <label class="advanced-field">Porsi<input id="porsi" type="number" placeholder="4" /></label>
+          </div>
+          <label class="advanced-field">Status Kenangan<select id="status"><option>Belum Dicoba</option><option>Sudah Dicoba</option><option>Favorit Keluarga</option><option>Resep Andalan</option></select></label>
+          <label class="advanced-field">Rating Keluarga<select id="rating_keluarga"><option value="0">Belum diberi rating</option><option value="1">1 dari 5</option><option value="2">2 dari 5</option><option value="3">3 dari 5</option><option value="4">4 dari 5</option><option value="5">5 dari 5</option></select></label>
+          <label class="advanced-field">Label Kenangan<input id="tag" placeholder="Resep Mama, Menu Minggu, Favorit Anak" /></label>
+          <label class="advanced-field">Cerita di Balik Resep<textarea id="catatan_yonarta" placeholder="Contoh: Masakan ini selalu dibuat Mama saat kumpul keluarga."></textarea></label>
+          <label class="advanced-field">Link Sumber<input id="link_sumber" placeholder="Website / sosial media / sumber lain" /></label>
+        </div>
+
         <button class="primary wide" type="submit">Simpan Resep</button>
         <button class="ghost wide" type="button" id="cancelEdit">Batal</button>
       </form>
     </section>
 
     <section id="detail" class="page detail-view-page">
-      <button class="ghost" type="button" id="backToRecipes">← Kembali</button>
-      <div class="page-mode-banner view-mode"><span>👀 Cerita Resep Keluarga</span><small>Lihat resep, asal, dan cerita di balik masakan ini.</small></div>
+      <button class="ghost" type="button" id="backToRecipes"> <svg class="rk-inline-icon"><use href="#i-back"></use></svg> Kembali</button>
       <div id="recipeDetail" class="detail-box"></div>
     </section>
 
     <section id="plan" class="page">
-      <h2>📅 Jadwal Masakan Keluarga</h2>
-      <p class="muted">Buat jadwal menu keluarga otomatis dengan AI untuk 1–7 hari. Slot tetap Siang dan Malam.</p>
+      <h2>Rencana Masak</h2>
+      <p class="muted">Susun menu keluarga 1–7 hari. AI hanya membantu memberi pilihan; Anda tetap dapat mengubahnya.</p>
       <div class="plan-controls">
         <label>Mulai dari Tanggal<input id="planStartDate" type="date" /></label>
         <label>Jumlah Hari
@@ -343,19 +378,19 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
         </label>
         <label>Mode
           <select id="modeRandom">
-            <option value="all">🎲 Random Semua</option>
-            <option value="fav">❤️ Favorit Keluarga</option>
-            <option value="fast">⚡ Menu Cepat (≤30 menit)</option>
+            <option value="all">Semua resep</option>
+            <option value="fav">Favorit keluarga</option>
+            <option value="fast">Menu cepat (≤30 menit)</option>
           </select>
         </label>
       </div>
-      <button id="generatePlan" class="primary wide">🤖 Buat Menu dengan AI</button>
+      <button id="generatePlan" class="primary wide">Bantu Susun Menu</button>
       <div id="planAiStatus" class="ai-status" style="display:none"></div>
       <div id="planResult"></div>
       <div id="planActions" class="plan-actions" style="display:none">
-        <button id="generateShoppingList" class="primary wide">🛒 Buat Daftar Belanja</button>
-        <button id="copyPlanBtn" class="secondary wide" type="button">📋 Copy Jadwal</button>
-        <button id="clearPlanBtn" class="ghost wide" type="button">🗑️ Hapus Jadwal</button>
+        <button id="generateShoppingList" class="primary wide">Buat Daftar Belanja</button>
+        <button id="copyPlanBtn" class="secondary wide" type="button"><svg class="rk-inline-icon"><use href="#i-copy"></use></svg> Copy Jadwal</button>
+        <button id="clearPlanBtn" class="ghost wide" type="button"><svg class="rk-inline-icon"><use href="#i-trash"></use></svg> Hapus Jadwal</button>
       </div>
       <div id="shoppingListResult"></div>
     </section>
@@ -383,11 +418,11 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
 
 
     <section id="collections" class="page">
-      <h2>📚 Koleksi Keluarga</h2>
-      <p class="muted">Bangun folder seperti Resep Mama, Resep Oma, Hari Raya, Menu Anak, dan Favorit Rumah.</p>
+      <h2>Koleksi Keluarga</h2>
+      <p class="muted">Susun resep berdasarkan orang, momen, dan kebiasaan rumah.</p>
 
       <div class="tool-card">
-        <h3>📁 Lemari Resep Keluarga</h3>
+        <h3>Lemari Resep Keluarga</h3>
         <p class="muted">Koleksi membantu resep mudah ditemukan tanpa membuat beranda terasa penuh.</p>
         <form id="collectionForm" class="inline-form">
           <input id="collectionName" placeholder="Contoh: Resep Mama" required />
@@ -397,100 +432,117 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
       </div>
 
       <div class="tool-card">
-        <h3>🖨️ Print / PDF Buku Resep</h3>
+        <h3>Print / PDF Buku Resep</h3>
         <p class="muted">Buka detail resep lalu tekan tombol Print. Dari jendela print browser bisa pilih “Save as PDF”.</p>
-        <button class="secondary wide" data-go="recipes" type="button">📖 Pilih Resep Keluarga untuk Print</button>
+        <button class="secondary wide" data-go="recipes" type="button"><svg class="rk-inline-icon"><use href="#i-print"></use></svg> Pilih Resep Keluarga untuk Print</button>
       </div>
     </section>
 
 
     <section id="family" class="page">
-      <h2>👨‍👩‍👧‍👦 Family Profile</h2>
-      <p class="muted">Ruang identitas keluarga. Data akun aktif tetap dipisahkan per login; profil keluarga lengkap disiapkan sebagai fondasi family sharing.</p>
-      <div class="trust-panel"><b>Akun aktif</b><span id="familyAccountText">-</span></div>
-      <div class="tool-card"><h3>Rumah Digital Keluarga</h3><p>Gunakan aplikasi ini untuk menyimpan resep dari orang tersayang, menambahkan cerita, dan menjaga arsip tetap bisa dipakai kembali.</p></div>
+      <h2>Family Profile</h2>
+      <p class="muted">Identitas keluarga dan tempat resep ini berasal.</p>
+      <div class="trust-state-grid"><div class="trust-state-card"><b>Akun aktif</b><span id="familyAccountText">-</span></div><div class="trust-state-card"><b>Data</b><span>Dipisahkan per login</span></div><div class="trust-state-card"><b>Sharing</b><span>Dengan izin keluarga</span></div></div>
+      <div class="tool-card"><h3>Rumah Digital Keluarga</h3><p>Setiap resep bisa menyimpan siapa yang mengajarkan, kapan biasa dimasak, dan cerita yang ingin diingat.</p></div>
     </section>
 
     <section id="heritage" class="page">
-      <h2>📜 Warisan</h2>
-      <p class="muted">Area khusus untuk resep dengan asal <b>Warisan</b> atau koleksi yang ingin dijaga untuk generasi berikutnya.</p>
+      <h2>Warisan</h2>
+      <p class="muted">Resep yang tidak boleh ikut hilang bersama waktu.</p>
       <div class="heritage-actions"><button class="primary wide" data-go="add" type="button">+ Simpan Resep Warisan</button><button class="secondary wide" onclick="setRecipeListFilter({filter:'Warisan'})" type="button">Lihat Resep Warisan</button></div>
       <div id="heritageList" class="list"></div>
     </section>
 
     <section id="shopping" class="page">
-      <h2>🛒 Shopping List</h2>
+      <h2>Shopping List</h2>
       <p class="muted">Daftar belanja dibuat dari rencana masak. Pilih resep di halaman Rencana, lalu buat daftar belanja otomatis.</p>
-      <button class="primary wide" data-go="plan" type="button">📅 Buka Rencana Masak</button>
-      <div class="tool-card"><h3>Prinsip v3.1</h3><p>Shopping list masuk Family Hub karena penting secara operasional, tetapi bukan aksi harian utama untuk semua pengguna.</p></div>
+      <button class="primary wide" data-go="plan" type="button"><svg class="rk-inline-icon"><use href="#i-calendar"></use></svg> Buka Rencana Masak</button>
+      <div class="tool-card"><h3>Daftar belanja</h3><p>Bahan akan diringkas dari rencana masak keluarga.</p></div>
     </section>
 
     <section id="backup" class="page">
-      <h2>💾 Backup & Export</h2>
-      <p class="muted">Backup adalah fitur kepercayaan: resep keluarga tidak boleh terperangkap di satu perangkat.</p>
-      <div class="tool-card">
-        <h3>⬇️ Export Data Akun</h3>
-        <p class="muted">Export JSON berisi resep, koleksi, rencana, riwayat, dan master data akun aktif.</p>
-        <button id="exportDataBtn" class="primary wide" type="button">⬇️ Export Backup JSON</button>
+      <h2>Backup & Export</h2>
+      <p class="muted">Jaga salinan resep keluarga agar tidak bergantung pada satu perangkat.</p>
+      <div class="trust-state-grid">
+        <div class="trust-state-card"><b>Akun aktif</b><span id="backupAccountText">-</span></div>
+        <div class="trust-state-card"><b>Isi backup</b><span>Resep, koleksi, rencana, riwayat</span></div>
+        <div class="trust-state-card"><b>Kepemilikan</b><span>File tersimpan di perangkat Anda</span></div>
+      </div>
+      <div class="tool-card backup-card">
+        <h3>Backup Akun</h3>
+        <p class="muted">File JSON berisi arsip akun aktif. Simpan di tempat aman.</p>
+        <button id="exportDataBtn" class="primary wide" type="button">Download Backup</button>
         <label>Import / Restore Backup JSON
           <input id="importDataFile" type="file" accept="application/json,.json" />
         </label>
-        <button id="importDataBtn" class="secondary wide" type="button">⬆️ Import / Restore</button>
+        <button id="importDataBtn" class="secondary wide" type="button">Import / Restore</button>
         <div id="backupStatus" class="ai-status" style="display:none"></div>
       </div>
     </section>
 
     <section id="sharing" class="page">
-      <h2>🔐 Sharing Keluarga</h2>
-      <p class="muted">Fondasi sharing v3.1: resep hanya dibagikan kepada orang yang dipilih. Untuk fase ini, gunakan tombol share di detail resep; permission keluarga penuh disiapkan untuk rilis lanjutan.</p>
-      <div class="tool-card"><h3>Aturan Aman</h3><p>AI, export, dan share tidak boleh mengubah kepemilikan resep. User tetap pemilik data dan dapat mengedit hasil sebelum disimpan.</p></div>
+      <h2>Sharing Keluarga</h2>
+      <p class="muted">Bagikan resep tanpa kehilangan kendali pemilik arsip.</p>
+      <div class="tool-card"><h3>Kendali Pemilik</h3><p>Share tidak mengubah kepemilikan resep. Pemilik akun tetap dapat edit, backup, dan hapus.</p></div>
     </section>
 
     <section id="assistant" class="page">
-      <h2>✨ AI Assistant</h2>
-      <p class="muted">AI membantu merapikan resep dari foto, caption, teks, dan catatan. AI bukan pengganti keluarga; hasil harus tetap bisa diedit.</p>
-      <div class="tool-card"><h3>Gunakan AI dari halaman Tambah</h3><p>Pilih Foto / Caption untuk merapikan resep mentah menjadi bahan dan langkah.</p><button class="primary wide" data-go="add" type="button">✨ Buka Input AI</button></div>
+      <h2>AI Assistant</h2>
+      <p class="muted">AI membantu membaca dan merapikan. Cerita dan keputusan tetap milik keluarga.</p>
+      <div class="tool-card"><h3>Buka dari Tambah Resep</h3><p>Scan foto atau paste caption, lalu review sebelum simpan.</p><button class="primary wide" data-go="add" type="button">Buka Tambah Resep</button></div>
     </section>
 
     <section id="help" class="page">
-      <h2>❔ Bantuan Singkat</h2>
+      <h2>Bantuan Singkat</h2>
       <div class="help-list">
-        <div><b>Tambah resep</b><p>Tekan Tambah, pilih asal resep, lalu isi data inti dulu. Detail bisa dilengkapi nanti.</p></div>
+        <div><b>Tambah resep</b><p>Pilih Scan, Caption, atau Manual. Simpan dulu, lengkapi nanti.</p></div>
         <div><b>Upload foto</b><p>Foto utama menjadi gambar kartu resep. Foto tambahan bisa dipakai untuk catatan lama atau proses masak.</p></div>
         <div><b>Edit / hapus</b><p>Edit tersedia di kartu dan detail. Hapus selalu meminta konfirmasi agar resep tidak hilang tanpa sengaja.</p></div>
-        <div><b>Backup</b><p>Buka Family Hub → Backup untuk export data akun sebagai JSON.</p></div>
+        <div><b>Backup</b><p>Buka Family Hub → Backup untuk download salinan data akun.</p></div>
       </div>
     </section>
 
     <section id="privacy" class="page">
-      <h2>🛡️ Privacy Policy Ringkas</h2>
-      <div class="tool-card"><p>Resep, foto, koleksi, dan riwayat disimpan untuk akun yang sedang login. Data tidak ditampilkan ke akun lain selama Row Level Security Supabase dikonfigurasi benar. Export tersedia agar pemilik akun tetap memiliki salinan data resep keluarga.</p></div>
+      <h2>Privasi Ringkas</h2>
+      <p class="muted">Resep keluarga adalah milik akun yang menyimpannya.</p>
+      <div class="privacy-stack">
+        <div class="tool-card"><h3>Data resep</h3><p>Nama resep, bahan, langkah, foto, koleksi, cerita, dan riwayat dipakai untuk menjalankan aplikasi dan menampilkan arsip akun Anda.</p></div>
+        <div class="tool-card"><h3>Pemisahan akun</h3><p>Data ditampilkan berdasarkan akun login. Pastikan RLS Supabase aktif agar data antar akun tidak bercampur.</p></div>
+        <div class="tool-card"><h3>Backup dan kendali</h3><p>Export tersedia agar pemilik akun dapat menyimpan salinan data resep keluarga secara mandiri.</p></div>
+      </div>
     </section>
 
     <section id="settings" class="page">
-      <h2>⚙️ Settings</h2>
-      <div class="tool-card"><h3>Akun</h3><p id="settingsAccountText" class="muted">-</p><button id="settingsLogoutBtn" class="danger wide" type="button">Logout</button></div>
-      <div class="tool-card"><h3>Standar v3.1</h3><p>Bottom navigation hanya untuk aksi harian. Fitur keluarga, backup, AI, dan bantuan berada di Family Hub.</p></div>
+      <h2>Settings</h2>
+      <p class="muted">Akun, logout, backup, dan status privasi.</p>
+      <div class="tool-card account-card"><h3>Akun aktif</h3><p id="settingsAccountText" class="muted">-</p><button id="settingsLogoutBtn" class="danger wide" type="button">Logout</button></div>
+      <div class="trust-state-grid">
+        <div class="trust-state-card"><b>Light mode</b><span>Default bersih dan stabil</span></div>
+        <div class="trust-state-card"><b>Family Hub</b><span>Fitur sekunder tetap tertata</span></div>
+        <div class="trust-state-card"><b>Backup</b><span>Buka Hub → Backup</span></div>
+      </div>
     </section>
 
     <section id="gallery" class="page">
-      <h2>🖼️ Galeri Kenangan Masakan</h2>
+      <h2>Galeri Masakan</h2>
       <div id="galleryGrid" class="gallery-grid"></div>
     </section>
 
     <section id="history" class="page">
-      <h2>🕒 Terakhir Dilihat</h2>
+      <h2>Terakhir Dilihat</h2>
       <div id="historyList" class="list"></div>
     </section>
   </main>
 
+  <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
   <div id="photoViewer" class="photo-viewer" aria-hidden="true">
     <div class="photo-viewer-top">
-      <button class="photo-viewer-btn" onclick="closePhotoViewer()" type="button">✕</button>
+      <button class="photo-viewer-btn" onclick="closePhotoViewer()" type="button"><svg class="rk-inline-icon"><use href="#i-close"></use></svg></button>
       <div class="photo-viewer-tools">
-        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(-0.25)" type="button">−</button>
+        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(-0.25)" type="button"><svg class="rk-inline-icon"><use href="#i-minus"></use></svg></button>
         <button class="photo-viewer-btn" onclick="resetPhotoViewer()" type="button">Reset</button>
-        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(0.25)" type="button">＋</button>
+        <button class="photo-viewer-btn" onclick="zoomPhotoViewer(0.25)" type="button"><svg class="rk-inline-icon"><use href="#i-plus"></use></svg></button>
       </div>
     </div>
     <div class="photo-viewer-stage">
@@ -499,19 +551,19 @@ Cara: Tumis bawang, masukkan ayam, masak sampai matang."></textarea>
     <p class="photo-viewer-hint">Cubit foto untuk zoom, geser untuk melihat detail.</p>
   </div>
 
-  <nav class="bottomnav">
-    <button class="active" data-go="home">🏠<span>Beranda</span></button>
-    <button data-go="recipes">📖<span>Resep</span></button>
-    <button data-go="add" class="nav-add">➕<span>Tambah</span></button>
-    <button data-go="plan">📅<span>Rencana</span></button>
-    <button data-go="collections">📚<span>Koleksi</span></button>
+  <nav class="bottomnav" aria-label="Navigasi utama">
+    <button class="active" data-go="home"><svg class="rk-icon"><use href="#i-home"></use></svg><span>Beranda</span></button>
+    <button data-go="recipes"><svg class="rk-icon"><use href="#i-book"></use></svg><span>Resep</span></button>
+    <button data-go="add" class="nav-add"><svg class="rk-icon"><use href="#i-plus"></use></svg><span>Tambah</span></button>
+    <button data-go="plan"><svg class="rk-icon"><use href="#i-calendar"></use></svg><span>Rencana</span></button>
+    <button data-go="collections"><svg class="rk-icon"><use href="#i-layers"></use></svg><span>Koleksi</span></button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.4.0-clean"></script>
+  <script src="app.js?v=3.9.8-full-icon-audit"></script>
   <script>
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
+      navigator.serviceWorker.register('/sw.js?v=3.9.8-full-icon-audit').then(()=>console.log('SW registered')).catch(e=>console.warn('SW failed:',e));
     }
   </script>
 </body>

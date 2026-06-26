@@ -1,5 +1,5 @@
 /* =====================================================
-   Resep Keluarga v3.1
+   Resep Keluarga v3.9.8
    Cloud Sync: recipeHistory, mealPlan, recipeCollections → Supabase
    Foto Masakan Hero Image + Login Email/Password + Share Aplikasi + AI Menu Generator + Koleksi + Print/PDF + Admin Backup Hidden
    AI Extract (Qwen): Foto dan Teks/Caption Manual
@@ -52,7 +52,7 @@ const MEAL_LABELS = ['Siang','Malam'];
 const $ = (id) => document.getElementById(id);
 const lineArray = (v) => (v || '').split('\n').map(x => x.trim()).filter(Boolean);
 const csvArray = (v) => (v || '').split(',').map(x => x.trim()).filter(Boolean);
-const stars = (n) => n > 0 ? '⭐'.repeat(Math.min(Number(n)||0, 5)) : 'Belum ada rating';
+const stars = (n) => { const v = Math.max(0, Math.min(Number(n)||0, 5)); return v > 0 ? `Rating keluarga ${v}/5` : 'Belum ada rating'; };
 const escapeHtml = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const safeExternalUrl = (url='') => { try { const u = new URL(String(url), window.location.origin); return ['http:', 'https:'].includes(u.protocol) ? u.href : ''; } catch(e){ return ''; } };
 const encArg = (v='') => encodeURIComponent(String(v));
@@ -75,9 +75,9 @@ function recipeAuthorName(r){
 }
 function recipeAuditHtml(r){
   return `<div class="recipe-audit">
-    <span>✍️ Resep dari ${escapeHtml(recipeAuthorName(r))}</span>
-    <span>🕒 Disimpan ${formatDateTimeID(r.created_at)}</span>
-    <span>❤️ Dirawat terakhir ${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}</span>
+    <span>Resep dari ${escapeHtml(recipeAuthorName(r))}</span>
+    <span>Disimpan ${formatDateTimeID(r.created_at)}</span>
+    <span>Dirawat ${formatDateTimeID(r.last_edit_at || r.updated_at || r.created_at)}</span>
   </div>`;
 }
 
@@ -90,6 +90,29 @@ function setAuthStatus(message, type='loading'){
   el.style.display='block';
   el.className='ai-status ' + type;
   el.textContent = message;
+}
+
+function showToast(message, type='info'){
+  const stack = $('toastStack');
+  if(!stack){ console.log(message); return; }
+  const item = document.createElement('div');
+  item.className = `toast ${type}`;
+  item.textContent = message;
+  stack.appendChild(item);
+  requestAnimationFrame(() => item.classList.add('show'));
+  setTimeout(() => {
+    item.classList.remove('show');
+    setTimeout(() => item.remove(), 240);
+  }, 3200);
+}
+
+function setButtonBusy(btn, busyText='Memproses...'){
+  if(!btn) return () => {};
+  const old = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add('is-busy');
+  btn.innerHTML = `<span class="button-spinner"></span>${escapeHtml(busyText)}`;
+  return () => { btn.disabled = false; btn.classList.remove('is-busy'); btn.innerHTML = old; };
 }
 
 function isAdminUser(){
@@ -129,6 +152,10 @@ function renderTrustIdentity(){
   if($('hubUserMini')) $('hubUserMini').textContent = currentUser ? `${name} · ${account}` : 'Resep, cerita, backup, dan keluarga.';
   if($('familyAccountText')) $('familyAccountText').textContent = account;
   if($('settingsAccountText')) $('settingsAccountText').textContent = account;
+  if($('backupAccountText')) $('backupAccountText').textContent = account;
+  if($('hubRecipeCount')) $('hubRecipeCount').textContent = String(recipes.length || 0);
+  if($('hubSyncState')) $('hubSyncState').textContent = currentUser ? 'Aman' : 'Login';
+  if($('hubBackupState')) $('hubBackupState').textContent = currentUser ? 'Siap' : 'Masuk';
 }
 
 function openFamilyHub(){
@@ -203,7 +230,7 @@ async function loginWithPassword(){
     setAuthStatus('Gagal login: ' + friendlyAuthError(error), 'error');
     return;
   }
-  setAuthStatus('✅ Login berhasil. Memuat resep keluarga...', 'success');
+  setAuthStatus('Login berhasil. Memuat resep keluarga...', 'success');
 }
 
 async function sendLoginEmail(){
@@ -219,7 +246,7 @@ async function sendLoginEmail(){
     setAuthStatus('Gagal kirim magic link: ' + friendlyAuthError(error), 'error');
     return;
   }
-  setAuthStatus('✅ Magic link sudah dikirim. Buka email, klik link login, lalu kembali ke aplikasi.', 'success');
+  setAuthStatus('Magic link sudah dikirim. Buka email, klik link login, lalu kembali ke aplikasi.', 'success');
 }
 
 async function logout(){
@@ -240,7 +267,7 @@ function requireLogin(){
 
 async function shareApp(){
   const url = window.location.origin + window.location.pathname;
-  const text = `🍳 Resep Keluarga\nBuka aplikasi resep keluarga di sini:\n${url}`;
+  const text = `Resep Keluarga\nBuka aplikasi resep keluarga di sini:\n${url}`;
   if(navigator.share){
     try{ await navigator.share({ title:'Resep Keluarga', text, url }); return; }
     catch(e){ if(e.name === 'AbortError') return; }
@@ -313,7 +340,7 @@ function renderExtraPhotosPreview(){
   el.innerHTML = extraPhotosState.map((url, i) => `
     <div class="extra-thumb">
       <img src="${url}" alt="Foto tambahan ${i+1}" />
-      <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
+      <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">${rkIcon('i-close')}</button>
     </div>`).join('');
 }
 
@@ -408,10 +435,10 @@ function updateBackButton(){
 /* ---------- Data loading ---------- */
 
 async function loadAll(){
-  if(!db){ alert('Koneksi database belum siap. Coba refresh halaman.'); return; }
+  if(!db){ showToast('Database belum siap. Refresh halaman.', 'error'); return; }
   if(!requireLogin()) return;
   const {data: r, error: er} = await db.from('recipes').select('*').order('created_at',{ascending:false});
-  if(er){ alert('Gagal ambil resep: ' + er.message); return; }
+  if(er){ showToast('Gagal memuat resep. Coba refresh.', 'error'); console.error(er); return; }
   recipes = r || [];
 
   const mi = await db.from('master_ingredients').select('*').order('nama_bahan',{ascending:true});
@@ -449,9 +476,10 @@ async function loadAll(){
 
 function render(){
   $('totalResep').textContent = recipes.length;
+  if($('firstRecipeGuide')) $('firstRecipeGuide').style.display = recipes.length ? 'none' : 'grid';
   $('totalFavorit').textContent = recipes.filter(r=>['Favorit Keluarga','Resep Andalan'].includes(r.status)).length;
   renderCollectionFilterChips(); renderRecipes(); renderLatest(); renderMasterIngredients(); renderMasterUnits(); renderIngredientOptions();
-  renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory(); renderMealPlan(); renderCollections(); renderV3SecondaryPages();
+  renderCookNameOptions(); renderDashboard(); renderGallery(); renderHistory(); renderMealPlan(); renderCollections(); renderV3SecondaryPages(); renderTrustIdentity();
 }
 
 function renderCookNameOptions(){
@@ -477,13 +505,17 @@ function normalizeRecipeSource(src){
   return value || 'Kreasi sendiri';
 }
 
+function rkIcon(name, className='rk-inline-icon') {
+  return `<svg class="${className}" aria-hidden="true"><use href="#${name}"></use></svg>`;
+}
+
 function sourceIcon(src){
   const value = normalizeRecipeSource(src);
-  if(value === 'Internet') return '🌐';
-  if(value === 'Warisan') return '📜';
-  if(value === 'Keluarga') return '👨‍👩‍👧‍👦';
-  if(value === 'Teman') return '🤝';
-  return '✨';
+  if(value === 'Internet') return rkIcon('i-share');
+  if(value === 'Warisan') return rkIcon('i-scroll');
+  if(value === 'Keluarga') return rkIcon('i-home');
+  if(value === 'Teman') return rkIcon('i-user');
+  return rkIcon('i-spark');
 }
 
 function recipeCard(r){
@@ -492,19 +524,21 @@ function recipeCard(r){
   const source = normalizeRecipeSource(r.sumber_resep);
   const duration = r.durasi_menit ? `${escapeHtml(r.durasi_menit)} mnt` : '';
   const type = r.jenis_hidangan || r.bahan_utama || '';
-  const subtitle = [type, duration].filter(Boolean).join(' · ') || 'Resep keluarga';
-  return `<article class="recipe-card v31-recipe-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}");}'>
+  const meta = [type, duration].filter(Boolean).join(' · ') || 'Resep keluarga';
+  const story = r.catatan_yonarta ? String(r.catatan_yonarta).replace(/\s+/g,' ').trim() : '';
+  return `<article class="recipe-card native-recipe-card" onclick='viewRecipe("${r.id}")' role="button" tabindex="0" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();viewRecipe("${r.id}");}'>
     <div class="recipe-photo-wrap">
       ${photoStyle}
-      <div class="recipe-card-overlay"></div>
-      <span class="source-stamp">${sourceIcon(source)} ${escapeHtml(source)}</span>
-      ${fav ? '<span class="favorite-dot">★</span>' : ''}
-      <button class="share-btn" onclick='event.stopPropagation();shareRecipe("${r.id}")' title="Bagikan resep">↗</button>
+      ${fav ? `<span class="favorite-dot">${rkIcon('i-heart')}</span>` : ''}
     </div>
     <div class="recipe-info">
+      <div class="recipe-card-topline">
+        <span class="source-stamp">${sourceIcon(source)} ${escapeHtml(source)}</span>
+        <button class="share-btn" onclick='event.stopPropagation();shareRecipe("${r.id}")' title="Bagikan resep">${rkIcon('i-share')}</button>
+      </div>
       <h3>${escapeHtml(r.nama_resep)}</h3>
-      <p class="recipe-meta">${escapeHtml(subtitle)}</p>
-      ${r.catatan_yonarta ? `<p class="recipe-story-teaser">${escapeHtml(String(r.catatan_yonarta).slice(0,72))}${String(r.catatan_yonarta).length>72?'…':''}</p>` : ''}
+      <p class="recipe-meta">${escapeHtml(meta)}</p>
+      ${story ? `<p class="recipe-story-teaser">${escapeHtml(story.slice(0,64))}${story.length>64?'…':''}</p>` : ''}
       <div class="card-actions" onclick="event.stopPropagation()">
         <button class="secondary" onclick='editRecipe("${r.id}")'>Edit</button>
         <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button>
@@ -512,12 +546,11 @@ function recipeCard(r){
     </div>
   </article>`;
 }
-
 /* ---------- Share recipe ---------- */
 
 function buildRecipeShareText(r){
   const bahan = flatIngredients(r.bahan);
-  let text = `🍳 ${r.nama_resep}\n`;
+  let text = `${r.nama_resep}\n`;
   if(r.penulis_nama) text += `Resep dari: ${r.penulis_nama}\n`;
   if(r.catatan_yonarta) text += `Cerita: ${r.catatan_yonarta}\n\n`;
   text += `${r.bahan_utama || ''}${r.jenis_hidangan ? ' · ' + r.jenis_hidangan : ''}${r.durasi_menit ? ' · ' + r.durasi_menit + ' menit' : ''}\n\n`;
@@ -714,20 +747,24 @@ window.viewRecipe = (id) => {
   if(allPhotos.length){
     photoBlock = `<div class="detail-photo-wrap zoomable-photo" title="Ketuk untuk zoom foto">
       <img id="detailMainPhoto" src="${allPhotos[0]}" alt="Foto ${escapeHtml(r.nama_resep)}" onclick="openPhotoViewerBySrc(this.src)" />
-      <button class="detail-share-btn" onclick='shareRecipe("${r.id}")' title="Bagikan resep">📤</button>
-      <span class="zoom-hint">🔍 Ketuk foto untuk zoom</span>
+      <div class="detail-floating-actions">
+        <button onclick="goBack()" title="Kembali" type="button">${rkIcon('i-back')}</button>
+        <button onclick='shareRecipe("${r.id}")' title="Bagikan resep" type="button">${rkIcon('i-share')}</button>
+        <button onclick='editRecipe("${r.id}")' title="Edit resep" type="button">${rkIcon('i-edit')}</button>
+      </div>
+      <span class="zoom-hint">Foto resep</span>
     </div>`;
     if(allPhotos.length > 1){
       photoBlock += `<div class="photo-thumbs">${allPhotos.map((url,i)=>`<img src="${url}" class="thumb${i===0?' active':''}" onclick="selectDetailPhoto(${i})" ondblclick="openPhotoViewer(${i})" title="Ketuk untuk pilih, tap 2x untuk zoom" />`).join('')}</div>`;
     }
   } else {
-    photoBlock = `<div class="actions" style="margin-top:0"><button class="secondary wide" onclick='shareRecipe("${r.id}")'>📤 Bagikan Resep</button></div>`;
+    photoBlock = `<div class="detail-no-photo"><div class="detail-floating-actions"><button onclick="goBack()" title="Kembali" type="button">${rkIcon('i-back')}</button><button onclick='shareRecipe("${r.id}")' title="Bagikan resep" type="button">${rkIcon('i-share')}</button><button onclick='editRecipe("${r.id}")' title="Edit resep" type="button">${rkIcon('i-edit')}</button></div><b>Belum ada foto utama</b><span>Tambahkan foto agar resep lebih mudah dikenali keluarga.</span><button class="secondary small" onclick='editRecipe("${r.id}")'>Tambah Foto</button></div>`;
   }
 
   const cookCount = cookLog.filter(c=>c.recipe_id===r.id).length;
   const lastCooked = cookLog.filter(c=>c.recipe_id===r.id)[0];
   const cookInfo = cookCount > 0
-    ? `<span class="cook-count-badge">🔥 Dimasak ${cookCount}x${lastCooked ? ' · terakhir ' + new Date(lastCooked.cooked_at).toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : ''}</span>`
+    ? `<span class="cook-count-badge">${rkIcon('i-time')} Dimasak ${cookCount}x${lastCooked ? ' · terakhir ' + new Date(lastCooked.cooked_at).toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : ''}</span>`
     : '<span class="muted">Belum pernah ditandai dimasak</span>';
 
   const tags = Array.isArray(r.tag) && r.tag.length ? r.tag.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('') : '<span class="muted">Belum ada label kenangan</span>';
@@ -735,41 +772,57 @@ window.viewRecipe = (id) => {
   $('recipeDetail').innerHTML = `
     ${photoBlock}
     ${recipeAuditHtml(r)}
-    <div class="detail-card">
-      <span class="source-badge tag-pill">${sourceIcon(r.sumber_resep)} ${escapeHtml(normalizeRecipeSource(r.sumber_resep))}</span>
-      <h2>${escapeHtml(r.nama_resep)}</h2>
-      <p class="rating-line">${stars(r.rating_keluarga)}</p>
-      <div class="cook-track-row">
-        ${cookInfo}
-        <button class="primary small" onclick='markAsCooked("${r.id}")'>✅ Tandai Sudah Dimasak</button>
+    <div class="detail-card recipe-keeper-detail">
+      <div class="detail-title-row">
+        <div>
+          <span class="source-badge tag-pill">${sourceIcon(r.sumber_resep)} ${escapeHtml(normalizeRecipeSource(r.sumber_resep))}</span>
+          <h2>${escapeHtml(r.nama_resep)}</h2>
+          <p class="detail-subtitle">Arsip dari ${escapeHtml(recipeAuthorName(r))} · ${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : 'durasi belum diisi'} · ${r.porsi ? escapeHtml(r.porsi + ' porsi') : 'porsi belum diisi'}</p>
+        </div>
+        <button class="ghost small detail-heart" onclick='event.stopPropagation();toggleCookFocus()' title="Mode masak">Masak</button>
       </div>
-      <div class="collection-control">
-        <b>📁 Koleksi</b>
-        <div>${collectionPillsHtml(r.id) || '<span class="muted">Belum masuk koleksi</span>'}</div>
-        <select id="detailCollectionSelect">${collectionSelectOptions(r.id)}</select>
-        <button class="secondary small" onclick='addRecipeToCollectionFromDetail("${r.id}")'>+ Masukkan Koleksi</button>
+
+      <div class="meta-chip-row">
+        ${r.bahan_utama ? `<span>${escapeHtml(r.bahan_utama)}</span>` : ''}
+        ${r.jenis_hidangan ? `<span>${escapeHtml(r.jenis_hidangan)}</span>` : ''}
+        <span>${escapeHtml(normalizeRecipeSource(r.sumber_resep))}</span>
       </div>
-      <div class="meta-grid">
-        <div><b>Bahan Utama</b><span>${escapeHtml(r.bahan_utama || '-')}</span></div>
-        <div><b>Jenis Hidangan</b><span>${escapeHtml(r.jenis_hidangan || '-')}</span></div>
-        <div><b>Durasi</b><span>${r.durasi_menit ? escapeHtml(r.durasi_menit + ' menit') : '-'}</span></div>
-        <div><b>Porsi</b><span>${r.porsi ? escapeHtml(r.porsi + ' porsi') : '-'}</span></div>
-        <div><b>Biasanya Dimasak Oleh</b><span>${escapeHtml(r.dimasak_oleh || '-')}</span></div>
-        <div><b>Asal Resep</b><span>${escapeHtml(normalizeRecipeSource(r.sumber_resep))}</span></div>
-        <div><b>Link</b><span>${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
+
+      <section class="detail-section primary-read-section">
+        <div class="section-title-line"><h3>Bahan</h3><span>${flatIngredients(r.bahan).length || 0} item</span></div>
+        <div class="recipe-content grouped-ingredients">${ingredientsDetailHtml(r.bahan)}</div>
+      </section>
+      <section class="detail-section primary-read-section">
+        <div class="section-title-line"><h3>Cara Memasak</h3><span>${Array.isArray(r.cara_memasak) ? r.cara_memasak.length : 0} langkah</span></div>
+        <div class="recipe-content steps">${listStepsHtml(r.cara_memasak)}</div>
+      </section>
+      <section class="detail-section story-section">
+        <div class="section-title-line"><h3>Cerita di Balik Resep</h3><span>keluarga</span></div>
+        <p class="note-box story-box">${escapeHtml(r.catatan_yonarta || 'Belum ada cerita. Tambahkan kenangan singkat: siapa yang biasa memasak, kapan disajikan, atau momen keluarga yang melekat pada resep ini.')}</p>
+      </section>
+
+      <div class="detail-secondary-stack">
+        <div class="collection-control compact-collection-control">
+          <b>Koleksi</b>
+          <div>${collectionPillsHtml(r.id) || '<span class="muted">Belum masuk koleksi</span>'}</div>
+          <div class="collection-add-row"><select id="detailCollectionSelect">${collectionSelectOptions(r.id)}</select><button class="secondary small" onclick='addRecipeToCollectionFromDetail("${r.id}")'>Tambah</button></div>
+        </div>
+        <div class="detail-meta-collapse">
+          <div class="meta-grid">
+            <div><b>Biasanya Dimasak Oleh</b><span>${escapeHtml(r.dimasak_oleh || '-')}</span></div>
+            <div><b>Link</b><span>${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener">Buka link</a>` : '-'}</span></div>
+            <div><b>Rating</b><span>${stars(r.rating_keluarga)}</span></div>
+            <div><b>Status</b><span>${cookInfo}</span></div>
+          </div>
+        </div>
+        <div class="tags">${tags}</div>
+        ${allPhotos.length ? `<h3>Foto</h3><div class="detail-photo-grid">${allPhotos.map((url,i)=>`<img src="${url}" onclick="openPhotoViewer(${i})" alt="Foto resep ${i+1}" />`).join('')}</div>` : ''}
       </div>
-      <h3>📖 Cerita di Balik Resep</h3>
-      <p class="note-box story-box">${escapeHtml(r.catatan_yonarta || 'Belum ada cerita. Tambahkan kenangan tentang resep ini saat edit nanti.')}</p>
-      <h3>🧂 Bahan</h3>
-      <div class="recipe-content grouped-ingredients">${ingredientsDetailHtml(r.bahan)}</div>
-      <h3>👨‍🍳 Cara Memasak</h3>
-      <div class="recipe-content steps">${listStepsHtml(r.cara_memasak)}</div>
-      <h3>🏷 Label Kenangan</h3>
-      <div class="tags">${tags}</div>
       <div class="actions detail-actions">
-        <button class="secondary" onclick='printRecipe("${r.id}")'>🖨️ Print / PDF</button>
-        <button class="primary edit-mode-btn" onclick='editRecipe("${r.id}")'>✏️ Edit Resep</button>
-        <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus Resep</button>
+        <button class="primary" onclick='markAsCooked("${r.id}")'>Sudah Dimasak</button>
+        <button class="secondary edit-mode-btn" onclick='editRecipe("${r.id}")'>Edit</button>
+        <button class="ghost" onclick='printRecipe("${r.id}")'>PDF</button>
+        <button class="danger" onclick='deleteRecipe("${r.id}")'>Hapus</button>
       </div>
     </div>`;
   go('detail');
@@ -777,11 +830,17 @@ window.viewRecipe = (id) => {
   renderHistory();
 };
 
+window.toggleCookFocus = () => {
+  document.body.classList.toggle('cook-focus-mode');
+  showToast(document.body.classList.contains('cook-focus-mode') ? 'Mode masak aktif.' : 'Mode masak mati.', 'success');
+};
+
 window.markAsCooked = async (id) => {
   if(!db || !requireLogin()) return;
   const { error } = await db.from('cook_log').insert({ recipe_id: id });
   if(error){
-    alert('Gagal menandai. Pastikan migrasi SQL cook_log sudah dijalankan.\n' + error.message);
+    showToast('Belum bisa menandai dimasak. Coba lagi nanti.', 'error');
+    console.error(error);
     return;
   }
   const cl = await db.from('cook_log').select('*').order('cooked_at',{ascending:false});
@@ -794,12 +853,12 @@ window.markAsCooked = async (id) => {
 
 function renderLatest(){
   document.querySelectorAll('.home-more-recipes').forEach(el => el.remove());
-  const homeLimit = 6;
+  const homeLimit = 4;
   const homeRecipes = recipes.slice(0, homeLimit);
   if($('latestTitle')) $('latestTitle').textContent = recipes.length > homeLimit ? `Terbaru (${homeLimit} dari ${recipes.length})` : `Terbaru disimpan (${recipes.length})`;
-  $('latestList').innerHTML = homeRecipes.map(recipeCard).join('') || '<p class="muted">Belum ada resep keluarga yang tersimpan.</p>';
+  $('latestList').innerHTML = homeRecipes.map(recipeCard).join('') || '<div class="empty-state empty-state-hero"><b>Simpan resep pertama yang tidak ingin hilang.</b><span>Mulai dari masakan Mama, Oma, atau catatan keluarga yang paling sering dicari.</span><button class="primary small" onclick="go(\'add\')">Simpan Resep Pertama</button></div>';
   if(recipes.length > homeLimit){
-    $('latestList').insertAdjacentHTML('afterend', '<button class="secondary full-width home-more-recipes" onclick="go(\'recipes\')">📖 Lihat Semua Resep Keluarga</button>');
+    $('latestList').insertAdjacentHTML('afterend', '<button class="secondary full-width home-more-recipes" onclick="go(\'recipes\')">Lihat Semua Resep</button>');
   }
 }
 
@@ -813,7 +872,7 @@ function renderRecipes(){
     const okCollection = !activeCollectionFilter || ((recipeCollections[activeCollectionFilter] || []).includes(r.id));
     return okSearch && okFilter && okCollection;
   });
-  $('recipeList').innerHTML = filtered.map(recipeCard).join('') || '<p class="muted">Tidak ada resep.</p>';
+  $('recipeList').innerHTML = filtered.map(recipeCard).join('') || '<div class="empty-state"><b>Resep belum ditemukan.</b><span>Coba kata lain, atau simpan resep keluarga ini sebelum lupa.</span><button class="secondary small" onclick="activeFilter=\'\';activeCollectionFilter=\'\';if($(\'searchInput\'))$(\'searchInput\').value=\'\';renderRecipes();renderCollectionFilterChips();">Reset</button></div>';
 }
 
 function renderCollectionFilterChips(){
@@ -830,7 +889,7 @@ function renderCollectionFilterChips(){
   el.innerHTML = `<button type="button" class="chip collection-chip${allActive}" onclick="setCollectionFilter('')">Semua Koleksi</button>` + names.map(name => {
     const active = activeCollectionFilter === name ? ' active' : '';
     const count = (recipeCollections[name] || []).length;
-    return `<button type="button" class="chip collection-chip${active}" onclick="setCollectionFilter(decodeURIComponent('${encodeURIComponent(name)}'))">📁 ${escapeHtml(name)} ${count}</button>`;
+    return `<button type="button" class="chip collection-chip${active}" onclick="setCollectionFilter(decodeURIComponent('${encodeURIComponent(name)}'))">${rkIcon('i-layers')} ${escapeHtml(name)} ${count}</button>`;
   }).join('');
 }
 
@@ -869,7 +928,7 @@ function renderIngredientGroups(){
             <input class="ing-name" list="ingredientOptions" placeholder="Nama bahan" value="${escapeHtml(it.nama_bahan||'')}" />
             <input class="ing-qty" type="number" step="0.01" placeholder="Jumlah" value="${escapeHtml(it.jumlah||'')}" />
             ${unitSelectHtml(it.satuan||'')}
-            <button type="button" class="ghost small" onclick="removeIngredientRow(${gi},${ii})">×</button>
+            <button type="button" class="ghost small" onclick="removeIngredientRow(${gi},${ii})">${rkIcon('i-close')}</button>
           </div>`).join('')}
       </div>
     </div>`).join('');
@@ -893,11 +952,13 @@ window.removeIngredientGroup = (gi)=>{ syncIngredientGroupsFromDom(); ingredient
 async function handleRecipeSubmit(e){
   e.preventDefault();
   if(!requireLogin()) return;
+  const submitBtn = e.submitter || document.querySelector('#recipeForm button[type="submit"]');
+  const restoreBtn = setButtonBusy(submitBtn, 'Menyimpan...');
   const id = $('recipeId').value;
   syncIngredientGroupsFromDom();
   let uploadedPhotoUrl = null;
   const selectedPhoto = $('foto_file').files?.[0];
-  try { if(selectedPhoto) uploadedPhotoUrl = await uploadRecipePhoto(selectedPhoto); } catch(err){ return alert(err.message); }
+  try { if(selectedPhoto) uploadedPhotoUrl = await uploadRecipePhoto(selectedPhoto); } catch(err){ restoreBtn(); showToast(err.message, 'error'); return; }
 
   // Upload any newly selected extra photos
   const extraFiles = Array.from($('foto_files_extra').files || []);
@@ -907,7 +968,7 @@ async function handleRecipeSubmit(e){
         const url = await uploadRecipePhoto(f);
         if(url) extraPhotosState.push(url);
       }
-    } catch(err){ return alert(err.message); }
+    } catch(err){ restoreBtn(); showToast(err.message, 'error'); return; }
   }
 
   const existing = id ? recipes.find(r=>r.id===id) : null;
@@ -938,15 +999,17 @@ async function handleRecipeSubmit(e){
     last_edit_by_email: editorEmail
   };
   const res = id ? await db.from('recipes').update(payload).eq('id', id) : await db.from('recipes').insert(payload);
-  if(res.error) return alert('Gagal simpan: ' + res.error.message);
+  if(res.error){ restoreBtn(); showToast('Gagal menyimpan resep. Coba lagi.', 'error'); console.error(res.error); return; }
+  showToast(id ? 'Resep berhasil diperbarui.' : 'Resep berhasil disimpan.', 'success');
   resetForm(); await loadAll(); go('recipes');
+  restoreBtn();
 }
 
 window.editRecipe = (id)=>{
   const r = recipes.find(x=>x.id===id); if(!r) return;
-  $('formTitle').textContent='✏️ Edit Resep'; $('recipeId').value=r.id;
+  $('formTitle').textContent='Edit Resep'; $('recipeId').value=r.id;
   const banner = $('formModeBanner');
-  if(banner){ banner.className='page-mode-banner edit-mode'; banner.innerHTML='<span>✏️ Mode Edit Resep</span><small>Anda sedang mengubah resep lama. Jangan lupa tekan Simpan.</small>'; }
+  if(banner){ banner.className='page-mode-banner edit-mode'; banner.innerHTML=`<span>${rkIcon('i-edit')} Mode Edit Resep</span><small>Anda sedang mengubah resep lama. Jangan lupa tekan Simpan.</small>`; }
   ['nama_resep','penulis_nama','bahan_utama','jenis_hidangan','status','catatan_yonarta','link_sumber','dimasak_oleh'].forEach(k=>{ if($(k)) $(k).value=r[k]||''; });
   if($('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(r.sumber_resep || 'Keluarga');
   $('durasi_menit').value=r.durasi_menit||''; $('porsi').value=r.porsi||''; $('rating_keluarga').value=r.rating_keluarga||0;
@@ -975,12 +1038,15 @@ window.deleteRecipe = async (id)=>{
 function resetForm(){
   $('recipeForm').reset();
   $('recipeId').value='';
-  $('formTitle').textContent='➕ Simpan Resep Keluarga';
+  $('formTitle').textContent='Tambah Resep';
   const banner = $('formModeBanner');
-  if(banner){ banner.className='page-mode-banner add-mode'; banner.innerHTML='<span>➕ Simpan Resep Keluarga</span><small>Catat resep hari ini supaya tetap hidup untuk anak cucu.</small>'; }
+  if(banner){ banner.className='page-mode-banner add-mode'; banner.innerHTML=`<span>${rkIcon('i-plus')} Simpan Resep Keluarga</span><small>Catat resep hari ini supaya tetap hidup untuk anak cucu.</small>`; }
   if($('penulis_nama')) $('penulis_nama').value='';
   if($('sumber_resep')) $('sumber_resep').value='Keluarga';
   document.body.classList.remove('show-advanced-form');
+  if($('toggleAdvancedFormBtn')) $('toggleAdvancedFormBtn').textContent = 'Detail tambahan';
+  document.querySelectorAll('.ai-tab').forEach(t=>t.classList.toggle('active', t.dataset.aitab === 'photo-caption'));
+  document.querySelectorAll('.ai-panel').forEach(p=>p.classList.toggle('active', p.dataset.aipanel === 'photo-caption'));
   document.querySelectorAll('.capture-choice').forEach(btn=>btn.classList.toggle('active', btn.dataset.sourceChoice === 'Keluarga'));
   $('rating_keluarga').value=0;
   setPhotoPreview(null);
@@ -1023,7 +1089,7 @@ async function saveMealPlan(){
 
 function buildPlanText(){
   if(!mealPlan.length) return '';
-  let text = '📅 JADWAL MENU KELUARGA\n\n';
+  let text = 'JADWAL MENU KELUARGA\n\n';
   mealPlan.forEach(d => {
     const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
     text += `${dateLabel}\n`;
@@ -1041,7 +1107,7 @@ window.copyMealPlan = (evt) => {
   if(!text) return;
   navigator.clipboard.writeText(text).then(()=>{
     const btn = evt?.target;
-    if(btn){ const orig = btn.textContent; btn.textContent = '✅ Jadwal tersalin!'; setTimeout(()=>btn.textContent=orig, 1500); }
+    if(btn){ const orig = btn.innerHTML; btn.innerHTML = `${rkIcon('i-check')} Jadwal tersalin`; setTimeout(()=>btn.innerHTML=orig, 1500); }
   }).catch(()=>alert('Gagal copy jadwal.'));
 };
 
@@ -1149,7 +1215,7 @@ async function generatePlan(){
 
   // Pastikan UI tetap sesuai keputusan: maksimum 7 hari, tanpa slot Pagi.
   $('jumlahHari').value = String(days);
-  setPlanAiStatus(`⏳ AI sedang menyusun menu ${days} hari (${days*meals} menu)...`, 'loading');
+  setPlanAiStatus(`AI sedang menyusun menu ${days} hari (${days*meals} menu)...`, 'loading');
 
   try {
     const recipesForAi = pool.slice(0, 120).map(r => ({
@@ -1169,13 +1235,13 @@ async function generatePlan(){
     mealPlan = normalizeAiPlan(aiPlan, { startDate, days, meals, pool });
     saveMealPlan();
     renderMealPlan();
-    setPlanAiStatus(`✅ Menu ${days} hari berhasil dibuat dengan AI.`, 'success');
+    setPlanAiStatus(`Menu ${days} hari berhasil dibuat dengan AI.`, 'success');
   } catch(err) {
     console.warn('AI menu generator fallback:', err);
     mealPlan = buildRandomPlan({ startDate, days, meals, pool });
     saveMealPlan();
     renderMealPlan();
-    setPlanAiStatus(`⚠️ AI belum aktif/gagal (${err.message}). Jadwal tetap dibuat otomatis tanpa AI.`, 'error');
+    setPlanAiStatus(`AI belum aktif atau gagal (${err.message}). Jadwal tetap dibuat otomatis tanpa AI.`, 'error');
   }
 }
 
@@ -1225,27 +1291,27 @@ function renderMealPlan(){
   }
 
   const totalMenus = mealPlan.reduce((s,d)=>s+d.meals.length,0);
-  let html = `<div class="plan-summary">✅ ${mealPlan.length} hari · ${totalMenus} menu · otomatis tersimpan di cloud</div>`;
+  let html = `<div class="plan-summary">${rkIcon('i-check')} ${mealPlan.length} hari · ${totalMenus} menu · otomatis tersimpan di cloud</div>`;
   html += '<div class="plan-grid">';
   mealPlan.forEach(d => {
     const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
     html += `<div class="plan-day">
       <div class="plan-day-header">
         <h3>${dateLabel}</h3>
-        <button class="ghost small" onclick="randomizeDay(${d.day})" title="Acak semua menu hari ini">🔄</button>
+        <button class="ghost small" onclick="randomizeDay(${d.day})" title="Acak semua menu hari ini">${rkIcon('i-repeat')}</button>
       </div>`;
     d.meals.forEach((meal, mi) => {
       const r = recipes.find(x=>x.id===meal.recipeId);
       const name = r ? r.nama_resep : '(resep dihapus)';
       const label = MEAL_LABELS[mi] || 'Menu';
-      const lockIcon = meal.locked ? '🔒' : '🔓';
+      const lockIcon = meal.locked ? rkIcon('i-lock') : rkIcon('i-unlock');
       const lockClass = meal.locked ? 'locked' : '';
       html += `<div class="plan-meal ${lockClass}">
         <div class="plan-meal-label">${label}</div>
         <div class="plan-meal-name" onclick="if(${!!r})viewRecipe('${meal.recipeId}')">${escapeHtml(name)}</div>
         <div class="plan-meal-actions">
           <button class="plan-btn" onclick="toggleLockMeal(${d.day},${mi})" title="${meal.locked?'Unlock':'Lock'}">${lockIcon}</button>
-          <button class="plan-btn" onclick="randomizeDayMeal(${d.day},${mi})" title="Ganti menu ini" ${meal.locked?'disabled':''}>🔄</button>
+          <button class="plan-btn" onclick="randomizeDayMeal(${d.day},${mi})" title="Ganti menu ini" ${meal.locked?'disabled':''}>${rkIcon('i-repeat')}</button>
         </div>
       </div>`;
     });
@@ -1305,14 +1371,14 @@ function generateShoppingList(){
     byCategory[it.kategori].push(it);
   });
 
-  const categoryIcons = { 'Bumbu':'🧂', 'Daging':'🥩', 'Sayur':'🥬', 'Karbohidrat':'🍚', 'Buah':'🍎', 'Lainnya':'📦' };
+  const categoryIcons = { 'Bumbu':rkIcon('i-spice'), 'Daging':rkIcon('i-meat'), 'Sayur':rkIcon('i-leaf'), 'Karbohidrat':rkIcon('i-grain'), 'Buah':rkIcon('i-fruit'), 'Lainnya':rkIcon('i-box') };
 
   let html = '<div class="shopping-list">';
-  html += '<h3>🛒 Daftar Belanja</h3>';
+  html += `<h3>${rkIcon('i-cart')} Daftar Belanja</h3>`;
   html += `<p class="muted">${mealPlan.length} hari · ${mealPlan.reduce((s,d)=>s+d.meals.length,0)} menu · ${items.length} bahan</p>`;
 
   Object.entries(byCategory).forEach(([cat, catItems]) => {
-    const icon = categoryIcons[cat] || '📦';
+    const icon = categoryIcons[cat] || rkIcon('i-box');
     html += `<div class="shop-category">
       <h4>${icon} ${escapeHtml(cat)}</h4>
       <ul class="shop-items">`;
@@ -1330,8 +1396,8 @@ function generateShoppingList(){
     html += '</ul></div>';
   });
   html += '<div class="shop-actions">';
-  html += '<button class="secondary wide" onclick="copyShoppingList(event)">📋 Copy Teks</button>';
-  html += '<button class="primary wide" onclick="shareShoppingListWA()">💬 Kirim ke WhatsApp</button>';
+  html += '<button class="secondary wide" onclick="copyShoppingList(event)">'+rkIcon('i-copy')+' Copy Teks</button>';
+  html += `<button class="primary wide" onclick="shareShoppingListWA()">${rkIcon('i-chat')} Kirim ke WhatsApp</button>`;
   html += '</div>';
   html += '</div>';
   $('shoppingListResult').innerHTML = html;
@@ -1363,11 +1429,11 @@ function buildShoppingText(){
   const byCategory = {};
   items.forEach(it => { if(!byCategory[it.kategori]) byCategory[it.kategori]=[]; byCategory[it.kategori].push(it); });
 
-  let text = `🛒 DAFTAR BELANJA\n${mealPlan.length} hari · ${mealPlan.reduce((s,d)=>s+d.meals.length,0)} menu\n\n`;
+  let text = `DAFTAR BELANJA\n${mealPlan.length} hari · ${mealPlan.reduce((s,d)=>s+d.meals.length,0)} menu\n\n`;
   // add menu summary with real dates
   mealPlan.forEach(d => {
     const dateLabel = d.date ? formatPlanDate(new Date(d.date)) : `Hari ${d.day}`;
-    text += `📅 ${dateLabel}: `;
+    text += `${dateLabel}: `;
     text += d.meals.map((m,i) => {
       const r = recipes.find(x=>x.id===m.recipeId);
       return `${MEAL_LABELS[i]||'Menu'} - ${r?r.nama_resep:'?'}`;
@@ -1391,7 +1457,7 @@ window.copyShoppingList = (evt) => {
     const btn = evt?.target;
     if(btn){
       const orig = btn.textContent;
-      btn.textContent = '✅ Tersalin!';
+      btn.textContent = 'Tersalin';
       setTimeout(()=>{ btn.textContent = orig; }, 1500);
     }
   }).catch(()=>alert('Gagal copy. Coba manual.'));
@@ -1502,23 +1568,23 @@ function applyExtractedRecipe(recipe, sourceLabel){
     renderIngredientGroups();
   }
   if(sourceLabel && $('sumber_resep')) $('sumber_resep').value = normalizeRecipeSource(sourceLabel);
-  setAiStatus('✅ Resep berhasil diisi otomatis! Silakan periksa & lengkapi sebelum simpan.', 'success');
+  setAiStatus('Resep sudah dirapikan. Periksa lalu simpan.', 'success');
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
 async function handleAiExtractPhoto(){
   const files = Array.from($('aiPhotoInput').files || []);
   if(!files.length) return setAiStatus('Pilih minimal 1 foto dulu.', 'error');
-  setAiStatus(`⏳ Mengompres ${files.length} foto...`, 'loading');
+  setAiStatus(`Mengompres ${files.length} foto...`, 'loading');
   try {
     const images = await Promise.all(files.map(f => compressImageFile(f)));
     const totalKB = images.reduce((sum, img) => sum + estimateBase64SizeKB(img), 0);
-    setAiStatus(`⏳ Membaca ${files.length} foto (~${totalKB} KB) dengan AI...`, 'loading');
+    setAiStatus(`Membaca ${files.length} foto...`, 'loading');
     const recipe = await callExtractRecipeApi({ mode: 'photo', imagesBase64: images });
     const source = $('aiPhotoSource')?.value || $('sumber_resep')?.value || 'Keluarga';
     applyExtractedRecipe(recipe, source);
   } catch(err){
-    setAiStatus('❌ ' + err.message, 'error');
+    setAiStatus(err.message, 'error');
   }
 }
 
@@ -1526,12 +1592,12 @@ async function handleAiExtractText(){
   const text = $('aiTextInput').value.trim();
   const source = $('aiTextSource')?.value || 'Internet';
   if(!text) return setAiStatus('Tulis atau paste teks dulu.', 'error');
-  setAiStatus('⏳ Merapikan teks dengan AI...', 'loading');
+  setAiStatus('Merapikan teks...', 'loading');
   try {
     const recipe = await callExtractRecipeApi({ mode: 'text', rawText: text });
     applyExtractedRecipe(recipe, source);
   } catch(err){
-    setAiStatus('❌ ' + err.message, 'error');
+    setAiStatus(err.message, 'error');
   }
 }
 
@@ -1646,7 +1712,7 @@ window.editMasterUnit = async (id)=>{
 
 function renderMasterUnits(){
   $('masterUnitList').innerHTML = masterUnits.map(u=> u.id
-    ? `<span class="tag-pill">${escapeHtml(u.nama_satuan)} <button class="mini-x" onclick='editMasterUnit("${u.id}")' title="Edit">✏️</button><button class="mini-x" onclick='deleteMasterUnit("${u.id}")' title="Hapus">×</button></span>`
+    ? `<span class="tag-pill">${escapeHtml(u.nama_satuan)} <button class="mini-x" onclick='editMasterUnit("${u.id}")' title="Edit">${rkIcon('i-edit')}</button><button class="mini-x" onclick='deleteMasterUnit("${u.id}")' title="Hapus">${rkIcon('i-close')}</button></span>`
     : `<span class="tag-pill">${escapeHtml(u.nama_satuan)}</span>`
   ).join('');
 }
@@ -1774,13 +1840,13 @@ function renderGallery(){
   const withPhotos = recipes.filter(r=>r.foto_url);
   el.innerHTML = withPhotos.length
     ? withPhotos.map(r=>`<div class="gallery-card clickable-card" onclick='viewRecipe("${r.id}")'><img src="${r.foto_url}" alt="${escapeHtml(r.nama_resep)}" loading="lazy"><span>${escapeHtml(r.nama_resep)}</span></div>`).join('')
-    : '<p class="muted">Belum ada foto utama.</p>';
+    : '<div class="empty-state"><b>Belum ada foto resep.</b><span>Foto catatan lama dan masakan rumah akan menjadi arsip visual keluarga.</span><button class="secondary small" onclick="go(\'add\')">Tambah Foto Resep</button></div>';
 }
 
 function renderHistory(){
   const el=$('historyList'); if(!el) return;
   const data=recipeHistory.map(id=>recipes.find(r=>r.id===id)).filter(Boolean);
-  el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama||'')} · ${escapeHtml(r.jenis_hidangan||'')}</p></div>`).join('')||'<p class="muted">Belum ada riwayat.</p>';
+  el.innerHTML=data.map(r=>`<div class="item clickable-card" onclick='viewRecipe("${r.id}")'><h3>${escapeHtml(r.nama_resep)}</h3><p>${escapeHtml(r.bahan_utama||'')} · ${escapeHtml(r.jenis_hidangan||'')}</p></div>`).join('')||'<div class="empty-state"><b>Belum ada riwayat</b><span>Resep yang baru dilihat akan muncul di sini.</span></div>';
 }
 
 function renderV3SecondaryPages(){
@@ -1794,7 +1860,7 @@ function renderHeritageList(){
   const heritage = recipes.filter(r => normalizeRecipeSource(r.sumber_resep) === 'Warisan' || collectionNamesForRecipe(r.id).some(n => /warisan|mama|oma|nenek/i.test(n)));
   el.innerHTML = heritage.length
     ? heritage.slice(0, 8).map(recipeCard).join('')
-    : '<p class="muted">Belum ada resep warisan. Mulai dari satu resep keluarga yang paling ingin disimpan.</p>';
+    : '<div class="empty-state"><b>Belum ada resep warisan.</b><span>Pilih satu resep keluarga yang ingin tetap bisa dimasak anak cucu nanti.</span><button class="primary small" onclick="go(\'add\')">Simpan Resep Warisan</button></div>';
 }
 
 
@@ -1831,7 +1897,7 @@ function collectionNamesForRecipe(recipeId){
 
 function collectionPillsHtml(recipeId){
   const names = collectionNamesForRecipe(recipeId);
-  return names.length ? `<div class="collection-pills">${names.map(n=>`<span class="tag-pill mini">📁 ${escapeHtml(n)}</span>`).join('')}</div>` : '';
+  return names.length ? `<div class="collection-pills">${names.map(n=>`<span class="tag-pill mini">${rkIcon('i-layers')} ${escapeHtml(n)}</span>`).join('')}</div>` : '';
 }
 
 function collectionSelectOptions(recipeId){
@@ -1873,20 +1939,20 @@ function renderCollections(){
   const el = $('collectionList');
   if(!el) return;
   const names = Object.keys(recipeCollections).sort((a,b)=>a.localeCompare(b));
-  if(!names.length){ el.innerHTML = '<p class="muted">Belum ada koleksi.</p>'; return; }
+  if(!names.length){ el.innerHTML = '<div class="empty-state"><b>Belum ada koleksi.</b><span>Buat folder berdasarkan orang, momen, atau tradisi keluarga.</span></div>'; return; }
   el.innerHTML = names.map(name => {
     const ids = recipeCollections[name] || [];
     const rows = ids.map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(r => `
       <div class="collection-recipe-row">
         <span onclick='viewRecipe("${r.id}")'>${escapeHtml(r.nama_resep)}</span>
-        <button class="ghost small" onclick='removeRecipeFromCollection(decodeURIComponent("${encArg(name)}"),"${r.id}")'>×</button>
+        <button class="ghost small" onclick='removeRecipeFromCollection(decodeURIComponent("${encArg(name)}"),"${r.id}")'>${rkIcon('i-close')}</button>
       </div>`).join('');
     return `<div class="item compact collection-card">
       <div class="collection-head">
-        <div><h3>📁 ${escapeHtml(name)}</h3><p>${ids.length} resep</p></div>
+        <div><h3>${rkIcon('i-layers')} ${escapeHtml(name)}</h3><p>${ids.length} resep</p></div>
         <button class="danger small" onclick='deleteCollection(decodeURIComponent("${encArg(name)}"))'>Hapus</button>
       </div>
-      <div class="collection-recipe-list">${rows || '<p class="muted">Belum ada resep. Buka detail resep untuk memasukkan ke koleksi ini.</p>'}</div>
+      <div class="collection-recipe-list">${rows || '<p class="muted">Belum ada resep di koleksi ini.</p>'}</div>
     </div>`;
   }).join('');
 }
@@ -1916,7 +1982,7 @@ window.exportDataBackup = () => {
   if(!requireLogin()) return;
   const payload = {
     app: 'Resep Keluarga',
-    version: '3.1.2',
+    version: '3.9.8',
     exported_at: new Date().toISOString(),
     recipes,
     masterIngredients,
@@ -1928,7 +1994,8 @@ window.exportDataBackup = () => {
   };
   const date = new Date().toISOString().slice(0,10);
   downloadTextFile(`resep-keluarga-backup-${date}.json`, JSON.stringify(payload, null, 2));
-  setBackupStatus('✅ Backup JSON berhasil dibuat.', 'success');
+  setBackupStatus('Backup berhasil dibuat. Simpan file di tempat aman.', 'success');
+  showToast('Backup berhasil didownload.', 'success');
 };
 
 async function insertRecipesFromBackup(items){
@@ -1972,10 +2039,10 @@ async function insertRecipesFromBackup(items){
 window.importDataBackup = async () => {
   if(!requireLogin()) return;
   const file = $('importDataFile')?.files?.[0];
-  if(!file) return setBackupStatus('Pilih file backup JSON dulu.', 'error');
+  if(!file) return setBackupStatus('Pilih file backup JSON terlebih dahulu.', 'error');
   if(!confirm('Import backup akan menambahkan resep yang belum ada dan mengganti data koleksi/jadwal di cloud. Lanjut?')) return;
   try {
-    setBackupStatus('⏳ Membaca file backup...', 'loading');
+    setBackupStatus('Membaca file backup...', 'loading');
     const text = await file.text();
     const data = JSON.parse(text);
     const result = await insertRecipesFromBackup(data.recipes || []);
@@ -2000,9 +2067,9 @@ window.importDataBackup = async () => {
       saveCollections();
     }
     await loadAll();
-    setBackupStatus(`✅ Import selesai. Resep masuk: ${result.inserted}. Dilewati: ${result.skipped}.`, 'success');
+    setBackupStatus(`Import selesai. Resep masuk: ${result.inserted}. Dilewati: ${result.skipped}.`, 'success');
   } catch(err){
-    setBackupStatus('❌ Import gagal: ' + err.message, 'error');
+    setBackupStatus('Import gagal: ' + err.message, 'error');
   }
 };
 
@@ -2019,7 +2086,7 @@ function buildPrintableRecipeHtml(r){
   <h2>Bahan</h2>${bahan}
   <h2>Cara Memasak</h2>${steps}
   <h2>Cerita di Balik Resep</h2><div class="note">${escapeHtml(r.catatan_yonarta||'-')}</div>
-  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.1</div>
+  <div class="footer">Tag: ${escapeHtml(tags || '-')}<br>Dibuat dari Resep Keluarga v3.9.8</div>
   <script>setTimeout(()=>window.print(),400)<\/script></body></html>`;
 }
 
@@ -2064,17 +2131,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Refresh button — with visual feedback
   $('refreshBtn').addEventListener('click', async () => {
     const btn = $('refreshBtn');
-    const origText = btn.textContent;
-    btn.textContent = '⏳ ...';
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="rk-action-state">...</span>';
     btn.disabled = true;
     try {
       await loadAll();
-      btn.textContent = '✅ OK';
+      btn.innerHTML = '<span class="rk-action-state">OK</span>';
     } catch(e) {
-      btn.textContent = '❌ Gagal';
+      btn.innerHTML = '<span class="rk-action-state">Gagal</span>';
       console.error('Refresh error:', e);
     }
-    setTimeout(()=>{ btn.textContent = origText; btn.disabled = false; }, 1000);
+    setTimeout(()=>{ btn.innerHTML = origHtml; btn.disabled = false; }, 1000);
   });
 
   // Back navigation (top of app)
@@ -2099,7 +2166,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.innerHTML = extraPhotosState.map((url, i) => `
       <div class="extra-thumb">
         <img src="${url}" alt="Foto tambahan ${i+1}" />
-        <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">×</button>
+        <button type="button" class="thumb-remove" onclick="removeExtraPhoto(${i})">${rkIcon('i-close')}</button>
       </div>`).join('') + pendingHtml;
   });
 
@@ -2185,7 +2252,7 @@ document.addEventListener('DOMContentLoaded', () => {
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     voiceBtn.addEventListener('click', () => {
-      voiceBtn.textContent = '🔴';
+      voiceBtn.innerHTML = rkIcon('i-alert');
       voiceBtn.disabled = true;
       try { recognition.start(); } catch(e){ console.warn('Speech recognition error:', e); }
     });
@@ -2194,7 +2261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $('searchInput').value = transcript;
       renderRecipes();
     });
-    const resetVoiceBtn = () => { voiceBtn.textContent = '🎤'; voiceBtn.disabled = false; };
+    const resetVoiceBtn = () => { voiceBtn.innerHTML = rkIcon('i-text'); voiceBtn.disabled = false; };
     recognition.addEventListener('end', resetVoiceBtn);
     recognition.addEventListener('error', resetVoiceBtn);
   }
@@ -2224,5 +2291,5 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAuthState();
   initAuth();
 
-  console.log('✅ Resep Keluarga v3.1 loaded');
+  console.log('Resep Keluarga v3.9.8 full authentic icon polish loaded');
 });

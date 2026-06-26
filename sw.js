@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resep-keluarga-v3.4.0';
+const CACHE_NAME = 'resep-keluarga-v3.9.8-full-icon-audit';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -15,10 +15,11 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  if (url.hostname.includes('supabase')) return;
-  if (url.pathname.endsWith('.css') || url.pathname.endsWith('.js') || url.pathname.endsWith('/') || url.pathname.endsWith('index.html')) {
-    event.respondWith(fetch(event.request, { cache: 'reload' }).catch(() => caches.match(event.request)));
+  if (url.hostname.includes('supabase') || url.hostname.includes('googleapis') || url.hostname.includes('gstatic')) return;
+  const noStore = url.pathname.endsWith('.css') || url.pathname.endsWith('.js') || url.pathname.endsWith('/') || url.pathname.endsWith('index.html') || url.pathname.includes('/icons/');
+  if (noStore) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request)));
     return;
   }
-  event.respondWith(fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request)));
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
